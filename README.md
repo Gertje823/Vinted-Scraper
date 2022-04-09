@@ -1,8 +1,14 @@
 # Vinted-Scraper
-This is a tool to download images and scrape data from Vinted and store it in a SQLite database.
+This is a tool to download images and scrape data from Vinted & Depop and store it in a SQLite database.
 
 ## How to use
+### Vinted
 Put the user IDs of the accounts in the users.txt and run the script.
+The script will download all the images and put it in the downloads folder.
+The data will be stored in the SQLite database.
+
+### Depop
+Put the usernames of the accounts in the users.txt and run the script with `-d`.
 The script will download all the images and put it in the downloads folder.
 The data will be stored in the SQLite database.
 
@@ -11,7 +17,7 @@ All the images of the products of the users will be downloaded. The avatar of th
 
 All the info will be stored in the sqlite db in the following tables:
 
-### Users
+### Vinted Users
  `Username`  
  `User_id`     
  `Gender`  
@@ -33,7 +39,7 @@ All the info will be stored in the sqlite db in the following tables:
  `Verification_google`  
  `Verification_phone`   
 
-### Products
+### Vinted Products
  `ID`  
  `User_id`     
  `Gender`  
@@ -46,6 +52,38 @@ All the info will be stored in the sqlite db in the following tables:
  `Images`  
  `Description`  
  `Title`  
+ `Platform`  
  
+ ### Depop Users
+ `Username`  
+ `User_id`     
+ `Bio`  
+ `first_name`  
+ `followers`  
+ `following`  
+ `initials`  
+ `items_sold`  
+ `last_name`  
+ `last_seen`  
+ `Avatar`  
+ `reviews_rating`  
+ `reviews_total`  
+ `verified`  
+ `website`  
+ ### Depop Products
+ `ID`  
+ `Sold`    
+ `User_id`    
+ `Gender`  
+ `Category`           
+ `Size`         
+ `State`  
+ `Brand`  
+ `Colors`  
+ `Price`  
+ `Images`  
+ `Description`  
+ `Title`  
+ `Platform`  
  
  If you have any feature requests don't hesitate to open a issue :)
