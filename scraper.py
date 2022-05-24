@@ -5,7 +5,6 @@ import os
 import sqlite3
 import argparse
 import time
-from fake_useragent import UserAgent
 
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
@@ -39,9 +38,8 @@ c.execute('''CREATE TABLE IF NOT EXISTS Depop_Users
 
 def vinted_session():
     s = requests.Session()
-    ua = UserAgent()
     s.headers = {
-        'User-Agent': ua.firefox,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en',
         'DNT': '1',
