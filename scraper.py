@@ -58,7 +58,7 @@ def download_vinted_data(userids, s, params):
     Platform = "Vinted"
     for USER_ID in userids:
         # Get user profile data
-        url = f"https://www.vinted.nl/api/v2/users/{USER_ID}"
+        url = f"https://www.vinted.nl/api/v2/users/{USER_ID.strip()}"
         r = s.get(url, params=params)
         if r.status_code == 200:
             jsonresponse = r.json()
@@ -127,7 +127,7 @@ def download_vinted_data(userids, s, params):
 
             r = s.get(url)
             jsonresponse = r.json()
-            print(jsonresponse)
+            #print(jsonresponse)
             products = jsonresponse['items']
             if products:
                 # Download all products
@@ -154,16 +154,15 @@ def download_vinted_data(userids, s, params):
                         title = product['title']
                         path= "downloads/" + str(User_id) +'/'
 
-
-                        print(img)
+                        #print(img)
                         if Images:
                             for images in img:
                                 full_size_url = images['full_size_url']
                                 img_name = images['high_resolution']['id']
-                                print(img_name)
+                                #print(img_name)
                                 filepath = 'downloads/'+ str(USER_ID) +'/' + img_name +'.jpeg'
                                 if not os.path.isfile(filepath):
-                                    print(full_size_url)
+                                    #print(full_size_url)
                                     req = requests.get(full_size_url)
                                     params = (ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description, title, Platform)
                                     c.execute("INSERT INTO Data(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, Images, description, title, Platform)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", params)
@@ -179,7 +178,7 @@ def download_vinted_data(userids, s, params):
             else:
                 print("Downloaded all images")
         else:
-            print("User does not exists")
+            print(f"User {USER_ID} does not exists")
     conn.close()
 
 def download_depop_data(userids):
