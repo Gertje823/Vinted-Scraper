@@ -49,9 +49,7 @@ def vinted_session():
     req = s.get("https://www.vinted.nl/member/13396883-wiwi2812")
     csrfToken = req.text.split('<meta name="csrf-token" content="')[1].split('"')[0]
     s.headers['X-CSRF-Token'] = csrfToken
-    params = (
-        ('localize', 'true'),
-    )
+    params = {'localize': 'true'}
     return s, params
 
 def download_vinted_data(userids, s, params):
