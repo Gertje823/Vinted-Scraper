@@ -49,15 +49,14 @@ def vinted_session():
     req = s.get("https://www.vinted.nl/member/13396883-wiwi2812")
     csrfToken = req.text.split('<meta name="csrf-token" content="')[1].split('"')[0]
     s.headers['X-CSRF-Token'] = csrfToken
-    params = {'localize': 'true'}
-    return s, params
+    return s
 
-def download_vinted_data(userids, s, params):
+def download_vinted_data(userids, s):
     Platform = "Vinted"
     for USER_ID in userids:
         # Get user profile data
         url = f"https://www.vinted.nl/api/v2/users/{USER_ID.strip()}"
-        r = s.get(url, params=params)
+        r = s.get(url)
         if r.status_code == 200:
             jsonresponse = r.json()
             data = jsonresponse['user']
@@ -335,5 +334,5 @@ with open('users.txt', 'r', encoding='utf-8') as list_of_users:
 if args.Depop:
     download_depop_data(userids)
 else:
-    session, params = vinted_session()
-    download_vinted_data(userids, session, params)
+    session = vinted_session()
+    download_vinted_data(userids, session)
