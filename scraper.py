@@ -78,7 +78,11 @@ def download_priv_msg(session_id, user_id):
 
         thread_id = msg_data['msg_thread']['id']
         for message in msg_data['msg_thread']['messages']:
-            if len(message['entity']['photos']) > 0:
+            try:
+                photo_data = message['entity']['photos']
+            except:
+                continue
+            if len(photo_data) > 0:
                 try:
                     os.mkdir(f"downloads/Messages/{message['entity']['user_id']}")
                 except OSError:
@@ -100,13 +104,11 @@ def download_priv_msg(session_id, user_id):
                         print(f"Image saved to {filepath}")
                     else:
                         print('File already exists, skipped.')
-                print(from_user_id)
                 if int(from_user_id) == int(user_id):
                     to_user_id = msg_data['msg_thread']['opposite_user']['id']
                 else:
                     to_user_id = user_id
                 # Save to DB
-                print(to_user_id)
 
                 params = (thread_id, from_user_id, to_user_id, msg_id, body, str(photo_list))
                 c.execute(
