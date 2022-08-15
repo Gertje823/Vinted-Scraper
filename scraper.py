@@ -9,6 +9,9 @@ import time
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
 parser.add_argument('--depop','-d',dest='Depop', action='store_true', help='Download Depop data.')
+parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted')
+parser.add_argument('--user_id','-u',dest='user_id', action='store', help='Your own userid', required=False)
+parser.add_argument('--session_id','-s',dest='session_id', action='store', help='Session id cookie for Vinted', required=False)
 args = parser.parse_args()
 
 # create downlods folders
@@ -33,7 +36,9 @@ c.execute('''CREATE TABLE IF NOT EXISTS Users
              (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Depop_Users
              (Username, User_id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website)''')
-
+c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
+             (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
+conn.commit()
 
 
 def vinted_session():
@@ -50,6 +55,64 @@ def vinted_session():
     csrfToken = req.text.split('<meta name="csrf-token" content="')[1].split('"')[0]
     s.headers['X-CSRF-Token'] = csrfToken
     return s
+
+def download_priv_msg(session_id, user_id):
+    s = requests.Session()
+    s.headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'TE': 'Trailers',
+        'Cookie': f"_vinted_fr_session={session_id};"
+    }
+    data = s.get(f"https://www.vinted.nl/api/v2/users/{user_id}/msg_threads").json()
+    try:
+        os.mkdir(f"downloads/Messages/")
+    except OSError:
+        print("Creation of the directory failed or the folder already exists ")
+    for msg_threads in data['msg_threads']:
+        id = msg_threads['id']
+        msg_data = s.get(f"https://www.vinted.nl/api/v2/users/{user_id}/msg_threads/{id}").json()
+
+        thread_id = msg_data['msg_thread']['id']
+        for message in msg_data['msg_thread']['messages']:
+            if len(message['entity']['photos']) > 0:
+                try:
+                    os.mkdir(f"downloads/Messages/{message['entity']['user_id']}")
+                except OSError:
+                    print ("Creation of the directory failed or the folder already exists ")
+
+                from_user_id = message['entity']['user_id']
+                msg_id = message['entity']['id']
+                body = message['entity']['body']
+                photo_list = []
+                for photo in message['entity']['photos']:
+                    req = requests.get(photo['full_size_url'])
+
+                    filepath = f"downloads/Messages/{from_user_id}/{photo['id']}.jpeg"
+                    photo_list.append(filepath)
+                    if not os.path.isfile(filepath):
+                        print(photo['id'])
+                        with open(filepath, 'wb') as f:
+                            f.write(req.content)
+                        print(f"Image saved to {filepath}")
+                    else:
+                        print('File already exists, skipped.')
+                print(from_user_id)
+                if int(from_user_id) == int(user_id):
+                    to_user_id = msg_data['msg_thread']['opposite_user']['id']
+                else:
+                    to_user_id = user_id
+                # Save to DB
+                print(to_user_id)
+
+                params = (thread_id, from_user_id, to_user_id, msg_id, body, str(photo_list))
+                c.execute(
+                    "INSERT INTO Vinted_Messages(thread_id, from_user_id, to_user_id, msg_id, body, photos)VALUES (?,?,?,?,?,?)",
+                    params)
+                conn.commit()
 
 def download_vinted_data(userids, s):
     Platform = "Vinted"
@@ -123,57 +186,65 @@ def download_vinted_data(userids, s):
             print('ID=' + str(USER_ID))
 
             r = s.get(url)
-            jsonresponse = r.json()
-            #print(jsonresponse)
-            products = jsonresponse['items']
-            if products:
-                # Download all products
-                path= "downloads/" + str(USER_ID) +'/'
-                try:
-                    os.mkdir(path)
-                except OSError:
-                    print ("Creation of the directory %s failed or the folder already exists " % path)
-                else:
-                    print ("Successfully created the directory %s " % path)
-                for product in jsonresponse['items']:
-                        img = product['photos']
-                        ID = product['id']
-                        User_id = product['user_id']
-                        description = product['description']
-                        Gender = product['user']['gender']
-                        Category = product['catalog_id']
-                        size = product['size']
-                        State = product['status']
-                        Brand = product['brand']
-                        Colors = product['color1']
-                        Price = product['price']
-                        Images = product['photos']
-                        title = product['title']
-                        path= "downloads/" + str(User_id) +'/'
 
-                        #print(img)
-                        if Images:
-                            for images in img:
-                                full_size_url = images['full_size_url']
-                                img_name = images['high_resolution']['id']
-                                #print(img_name)
-                                filepath = 'downloads/'+ str(USER_ID) +'/' + img_name +'.jpeg'
-                                if not os.path.isfile(filepath):
-                                    #print(full_size_url)
-                                    req = requests.get(full_size_url)
-                                    params = (ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description, title, Platform)
-                                    c.execute("INSERT INTO Data(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, Images, description, title, Platform)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", params)
-                                    conn.commit()
-                                    with open(filepath, 'wb') as f:
-                                        f.write(req.content)
-                                    print(f"Image saved to {filepath}")
-                                else:
-                                    print('File already exists, skipped.')
+            if r.status_code == 200:
+                print(r.status_code)
+                jsonresponse = r.json()
+                # print(jsonresponse)
+                products = jsonresponse['items']
+                if products:
+                    # Download all products
+                    path= "downloads/" + str(USER_ID) +'/'
+                    try:
+                        os.mkdir(path)
+                    except OSError:
+                        print ("Creation of the directory %s failed or the folder already exists " % path)
+                    else:
+                        print ("Successfully created the directory %s " % path)
+                    for product in jsonresponse['items']:
+                            img = product['photos']
+                            ID = product['id']
+                            User_id = product['user_id']
+                            description = product['description']
+                            Gender = product['user']['gender']
+                            Category = product['catalog_id']
+                            size = product['size']
+                            State = product['status']
+                            Brand = product['brand']
+                            Colors = product['color1']
+                            Price = product['price']
+                            Images = product['photos']
+                            title = product['title']
+                            path= "downloads/" + str(User_id) +'/'
 
-            if not products:
-                print('User has no products')
-            else:
-                print("Downloaded all images")
+                            #print(img)
+                            if Images:
+                                for images in img:
+                                    full_size_url = images['full_size_url']
+                                    img_name = images['high_resolution']['id']
+                                    #print(img_name)
+                                    filepath = 'downloads/'+ str(USER_ID) +'/' + img_name +'.jpeg'
+                                    if not os.path.isfile(filepath):
+                                        #print(full_size_url)
+                                        req = requests.get(full_size_url)
+                                        params = (ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description, title, Platform)
+                                        c.execute("INSERT INTO Data(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, Images, description, title, Platform)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", params)
+                                        conn.commit()
+                                        with open(filepath, 'wb') as f:
+                                            f.write(req.content)
+                                        print(f"Image saved to {filepath}")
+                                    else:
+                                        print('File already exists, skipped.')
+                if not products:
+                    print('User has no products')
+            elif r.status_code == 429:
+                print(f"Ratelimit waiting {r.headers['Retry-After']} seconds...")
+                limit = round(int(r.headers['Retry-After']) / 2)
+                for i in range(limit, 0, -1):
+                    print(f"{i}", end="\r", flush=True)
+                    time.sleep(1)
+                continue
+
         else:
             print(f"User {USER_ID} does not exists")
     conn.close()
@@ -333,6 +404,14 @@ with open('users.txt', 'r', encoding='utf-8') as list_of_users:
 
 if args.Depop:
     download_depop_data(userids)
+elif args.priv_msg:
+    if args.user_id:
+        user_id = args.user_id
+        session_id = args.session_id
+        download_priv_msg(session_id, user_id)
+    else:
+        print("Please use -u to enter a valid userid")
+        exit()
 else:
     session = vinted_session()
     download_vinted_data(userids, session)
