@@ -405,12 +405,12 @@ with open('users.txt', 'r', encoding='utf-8') as list_of_users:
 if args.Depop:
     download_depop_data(userids)
 elif args.priv_msg:
-    if args.user_id:
+    if args.user_id and args.session_id:
         user_id = args.user_id
         session_id = args.session_id
         download_priv_msg(session_id, user_id)
     else:
-        print("Please use -u to enter a valid userid")
+        print("Please use option -u and -s")
         exit()
 else:
     session = vinted_session()
