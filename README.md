@@ -12,6 +12,15 @@ Put the usernames of the accounts in the users.txt and run the script with `-d`.
 The script will download all the images and put it in the downloads folder.
 The data will be stored in the SQLite database.
 
+## Arguments
+`-p` scrape all images from your private messages. (requires `-s` to login and `-u` to set your userid)  
+`-s "your_vinted_fr_session"` to login to your account   
+`-u` set your userid
+
+### Example:  
+Download all images from private messages from your Vinted account  
+`python scraper.py -p -u 123456789 -s "RS9KcmE1THMxV3NlclRsbEVRdU52ZVp4UG.......ASFe26"`
+
 ## Data that will be scraped
 All the images of the products of the users will be downloaded. The avatar of the user will also be downloaded.
 
