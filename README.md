@@ -14,7 +14,7 @@ The data will be stored in the SQLite database.
 
 ## Arguments
 `-p` scrape all images from your private messages. (requires `-s` to login and `-u` to set your userid)  
-`-s "your_vinted_fr_session"` to login to your account   
+`-s "your_vinted_fr_session"` to login to your account. [how to get sessionid?](https://github.com/Gertje823/Vinted-Scraper/wiki/How-to-get-Vinted-sessionID%3F)   
 `-u` set your userid
 
 ### Example:  
