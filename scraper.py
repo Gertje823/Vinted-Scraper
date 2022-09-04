@@ -5,6 +5,7 @@ import os
 import sqlite3
 import argparse
 import time
+import cfscrape
 
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
@@ -42,7 +43,7 @@ conn.commit()
 
 
 def vinted_session():
-    s = requests.Session()
+    s = cfscrape.create_scraper()
     s.headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -57,7 +58,7 @@ def vinted_session():
     return s
 
 def download_priv_msg(session_id, user_id):
-    s = requests.Session()
+    s = cfscrape.create_scraper()
     s.headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -67,11 +68,20 @@ def download_priv_msg(session_id, user_id):
         'TE': 'Trailers',
         'Cookie': f"_vinted_fr_session={session_id};"
     }
-    data = s.get(f"https://www.vinted.nl/api/v2/users/{user_id}/msg_threads").json()
+    print(session_id)
+    data = s.get(f"https://www.vinted.nl/api/v2/users/{user_id}/msg_threads")
+    if data.status_code ==403:
+        # Access denied
+        print(f"Error: Access Denied\nCan't get content from 'https://www.vinted.nl/api/v2/users/{user_id}/msg_threads'")
+        exit(1)
+    data = data.json()
     try:
         os.mkdir(f"downloads/Messages/")
     except OSError:
         print("Creation of the directory failed or the folder already exists ")
+    if not "msg_threads" in data:
+        print("Error: Can't find any messages.\nPlease make sure you entered the sessionid correctly")
+        exit(1)
     for msg_threads in data['msg_threads']:
         id = msg_threads['id']
         msg_data = s.get(f"https://www.vinted.nl/api/v2/users/{user_id}/msg_threads/{id}").json()
