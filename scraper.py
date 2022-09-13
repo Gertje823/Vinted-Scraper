@@ -388,7 +388,7 @@ def download_depop_data(userids):
                 pass
 
 
-
+            # Download images
             for images in product_data['pictures']:
                 for i in images:
                     full_size_url = i['url']
@@ -409,6 +409,33 @@ def download_depop_data(userids):
                     print(f"Image saved to {filepath}")
                 else:
                     print('File already exists, skipped.')
+            # Download videos
+            if len(product_data['videos']) > 0:
+                for x in product_data['videos']:
+                    for source in x['sources']:
+                        if source['format'] == 'MP4':
+                            video_url = source['url']
+                            print(video_url)
+                            file_name = video_url.split('/')[5]
+                            filepath = 'downloads/' + str(userid) + '/' + str(file_name)
+                            if not os.path.isfile(filepath):
+                                print(full_size_url)
+                                req = requests.get(video_url)
+                                params = (
+                                    product_id, Sold, id, Gender, Category, ','.join(sizes), State, Brand,
+                                    ','.join(Colors), Price, filepath, description, title, Platform)
+                                c.execute(
+                                    "INSERT OR IGNORE INTO Data(ID, Sold, User_id, Gender, Category, size, State, Brand, Colors, Price, Images, description, title, Platform)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                    params)
+                                conn.commit()
+                                with open(filepath, 'wb') as f:
+                                    f.write(req.content)
+                                print(f"Video saved to {filepath}")
+                            else:
+                                print('File already exists, skipped.')
+
+
+
 
 #Import users from txt file
 with open('users.txt', 'r', encoding='utf-8') as list_of_users:
