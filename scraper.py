@@ -419,7 +419,6 @@ def download_depop_data(userids):
                             file_name = video_url.split('/')[5]
                             filepath = 'downloads/' + str(userid) + '/' + str(file_name)
                             if not os.path.isfile(filepath):
-                                print(full_size_url)
                                 req = requests.get(video_url)
                                 params = (
                                     product_id, Sold, id, Gender, Category, ','.join(sizes), State, Brand,
