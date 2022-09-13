@@ -9,7 +9,7 @@ The data will be stored in the SQLite database.
 
 ### Depop
 Put the usernames of the accounts in the users.txt and run the script with `-d`.
-The script will download all the images and put it in the downloads folder.
+The script will download all the images and videos and put it in the downloads folder.
 The data will be stored in the SQLite database.
 
 ## Arguments
