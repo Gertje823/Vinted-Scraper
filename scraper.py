@@ -155,7 +155,7 @@ def download_vinted_data(userids, s):
             verification_google = data['verification']['google']['valid']
             verification_phone = data['verification']['phone']['valid']
             if data['photo']:
-                photo = data['photo']['url']
+                photo = data['photo']['full_size_url']
                 photo_id = data['photo']['id']
                 try:
                     os.mkdir(f"downloads/Avatars/")
