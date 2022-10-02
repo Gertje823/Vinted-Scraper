@@ -129,8 +129,9 @@ def download_priv_msg(session_id, user_id):
 def download_vinted_data(userids, s):
     Platform = "Vinted"
     for USER_ID in userids:
+        USER_ID = USER_ID.strip()
         # Get user profile data
-        url = f"https://www.vinted.nl/api/v2/users/{USER_ID.strip()}"
+        url = f"https://www.vinted.nl/api/v2/users/{USER_ID}"
         r = s.get(url)
         if r.status_code == 200:
             jsonresponse = r.json()
