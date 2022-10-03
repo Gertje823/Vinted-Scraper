@@ -258,6 +258,13 @@ def download_vinted_data(userids, s):
                     time.sleep(1)
                 continue
 
+        elif r.status_code == 429:
+            print(f"Ratelimit waiting {r.headers['Retry-After']} seconds...")
+            limit = round(int(r.headers['Retry-After']) / 2)
+            for i in range(limit, 0, -1):
+                print(f"{i}", end="\r", flush=True)
+                time.sleep(1)
+            continue
         else:
             print(f"User {USER_ID} does not exists")
     conn.close()
