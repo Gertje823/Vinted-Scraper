@@ -126,6 +126,14 @@ def download_priv_msg(session_id, user_id):
                     params)
                 conn.commit()
 
+def get_all_items(s, USER_ID, total_pages, items):
+    for page in range(int(total_pages)-1):
+        page +=1
+        url = f'https://www.vinted.nl/api/v2/users/{USER_ID}/items?page={page}&per_page=200000'
+        r = s.get(url).json()
+        print(f"Fetching page {page+1}/{r['pagination']['total_pages']}")
+        items.extend(r['items'])
+
 def download_vinted_data(userids, s):
     Platform = "Vinted"
     for USER_ID in userids:
@@ -199,12 +207,18 @@ def download_vinted_data(userids, s):
             print('ID=' + str(USER_ID))
 
             r = s.get(url)
-
+            items = []
+            print(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
+            items.extend(r.json()['items'])
+            # products = jsonresponse['items']
+            if r.json()['pagination']['total_pages'] > 1:
+                print(f"User has more than {len(items)} items. fetching next page....")
+                get_all_items(s, USER_ID, r.json()['pagination']['total_pages'], items)
+            products = items
+            print(f"Total items: {len(products)}")
             if r.status_code == 200:
-                print(r.status_code)
-                jsonresponse = r.json()
                 # print(jsonresponse)
-                products = jsonresponse['items']
+
                 if products:
                     # Download all products
                     path= "downloads/" + str(USER_ID) +'/'
@@ -214,7 +228,7 @@ def download_vinted_data(userids, s):
                         print ("Creation of the directory %s failed or the folder already exists " % path)
                     else:
                         print ("Successfully created the directory %s " % path)
-                    for product in jsonresponse['items']:
+                    for product in products:
                             img = product['photos']
                             ID = product['id']
                             User_id = product['user_id']
