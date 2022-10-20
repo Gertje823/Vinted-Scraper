@@ -240,6 +240,7 @@ def download_vinted_data(userids, s):
                             Brand = product['brand']
                             Colors = product['color1']
                             Price = product['price']
+                            Price = f"{Price['amount']} {Price['currency_code']}"
                             Images = product['photos']
                             title = product['title']
                             path= "downloads/" + str(User_id) +'/'
