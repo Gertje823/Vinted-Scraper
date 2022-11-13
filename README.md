@@ -13,9 +13,12 @@ The script will download all the images and videos and put it in the downloads f
 The data will be stored in the SQLite database.
 
 ## Arguments
-`-p` scrape all images from your private messages. (requires `-s` to login and `-u` to set your userid)  
-`-s "your_vinted_fr_session"` to login to your account. [how to get sessionid?](https://github.com/Gertje823/Vinted-Scraper/wiki/How-to-get-Vinted-sessionID%3F)   
-`-u` set your userid
+`-p` [Vinted] scrape all images from your private messages. (requires `-s` to login and `-u` to set your userid)  
+`-s "your_vinted_fr_session"` [Vinted] to login to your account. [how to get sessionid?](https://github.com/Gertje823/Vinted-Scraper/wiki/How-to-get-Vinted-sessionID%3F)   
+`-u` [Vinted] set your userid  
+`-n` [Depop] Disable file download (Only scrape product info)  
+`-g` [Depop] Also download sold items
+
 
 ### Example:  
 Download all images from private messages from your Vinted account  
@@ -90,9 +93,11 @@ All the info will be stored in the sqlite db in the following tables:
  `Brand`  
  `Colors`  
  `Price`  
- `Images`  
+ `Image`  
  `Description`  
  `Title`  
  `Platform`  
- 
+ `Address`  
+ `discountedPriceAmount`  
+ `dateUpdated`  
  If you have any feature requests don't hesitate to open a issue :)
