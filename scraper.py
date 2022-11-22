@@ -15,6 +15,7 @@ parser.add_argument('--user_id','-u',dest='user_id', action='store', help='Your 
 parser.add_argument('--session_id','-s',dest='session_id', action='store', help='Session id cookie for Vinted', required=False)
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download (Currently only working for depop)', required=False)
 parser.add_argument('--sold_items','-g',dest='sold_items', action='store_true', help='Also download sold items (depop)', required=False)
+parser.add_argument('--start_from','-b',dest='start_from', action='store', help='Begin from a specific item (depop)', required=False)
 args = parser.parse_args()
 
 # create downlods folders
@@ -288,13 +289,24 @@ def download_vinted_data(userids, s):
             print(f"User {USER_ID} does not exists")
     conn.close()
 
-def get_all_depop_items(data, baseurl, slugs):
-    for i in data['products']:
-        slugs.append(i['slug'])
+def get_all_depop_items(data, baseurl, slugs, args, begin):
+    # Start from slug args.start_from (-b)
+    if args.start_from:
+        for i in data['products']:
+            # Prevent duplicates
+            if not i['slug'] in slugs:
+                if args.start_from == i['slug'] or begin == True:
+                    begin = True
+                    slugs.append(i['slug'])
+    else:
+        # start from 0
+        for i in data['products']:
+            # Prevent duplicates
+            if not i['slug'] in slugs:
+                slugs.append(i['slug'])
     while True:
 
         url = baseurl + f"&offset_id={data['meta']['last_offset_id']}"
-
         print(url)
         try:
             data = requests.get(url).json()
@@ -303,12 +315,24 @@ def get_all_depop_items(data, baseurl, slugs):
             print(requests.get(url).text)
             exit()
             break
-        for i in data['products']:
-            # Prevent duplicates
-            if not i['slug'] in slugs:
-                slugs.append(i['slug'])
-        if data['meta']['end'] == True:
-            break
+        # Start from slug args.start_from (-b)
+        if args.start_from:
+            for i in data['products']:
+                # Prevent duplicates
+                if not i['slug'] in slugs:
+                    if args.start_from == i['slug'] or begin == True:
+                        begin = True
+                        slugs.append(i['slug'])
+            if data['meta']['end'] == True:
+                break
+        else:
+            # start from 0
+            for i in data['products']:
+                # Prevent duplicates
+                if not i['slug'] in slugs:
+                    slugs.append(i['slug'])
+            if data['meta']['end'] == True:
+                break
     return slugs
 
 def download_depop_data(userids):
@@ -366,12 +390,13 @@ def download_depop_data(userids):
         baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
         data = requests.get(baseurl).json()
         print("Fetching all produts...")
-        slugs = get_all_depop_items(data, baseurl, slugs)
+        begin = False
+        slugs = get_all_depop_items(data, baseurl, slugs, args, begin)
 
         if args.sold_items:
             baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
             data = requests.get(baseurl).json()
-            get_all_depop_items(data, baseurl, slugs)
+            get_all_depop_items(data, baseurl, slugs, args, begin)
 
         print("Got all products. Start Downloading...")
         print(len(slugs))
@@ -384,7 +409,16 @@ def download_depop_data(userids):
             url = f"https://webapi.depop.com/api/v2/product/{slug}"
             print(slug)
             try:
-                product_data = requests.get(url).json()
+                product_data = requests.get(url)
+                if product_data.status_code == 200:
+                    product_data = product_data.json()
+                elif r.status_code == 429:
+                    print(f"Ratelimit waiting 60 seconds...")
+                    limit = 60
+                    for i in range(limit, 0, -1):
+                        print(f"{i}", end="\r", flush=True)
+                        time.sleep(1)
+                    continue
             except ValueError:
                 print("Error decoding JSON data. Skipping...")
                 pass
@@ -471,9 +505,9 @@ def download_depop_data(userids):
                             print(full_size_url)
                             req = requests.get(full_size_url)
                             params = (
-                            product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State, Brand, ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
+                            product_id, id, Sold, Gender, Category, subcategory, ','.join(sizes), State, Brand, ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
                             c.execute(
-                                "INSERT OR IGNORE INTO Depop_Data(ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                "INSERT OR IGNORE INTO Depop_Data(ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                                 params)
                             conn.commit()
                             with open(filepath, 'wb') as f:
