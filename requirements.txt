@@ -1,2 +1,2 @@
-cfscrape==2.1.1
+cloudscraper==1.2.66
 requests==2.27.1

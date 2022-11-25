@@ -5,7 +5,7 @@ import os
 import sqlite3
 import argparse
 import time
-import cfscrape
+import cloudscraper
 
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
@@ -48,7 +48,7 @@ conn.commit()
 
 
 def vinted_session():
-    s = cfscrape.create_scraper()
+    s = cloudscraper.create_scraper()
     s.headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -57,13 +57,13 @@ def vinted_session():
         'Connection': 'keep-alive',
         'TE': 'Trailers',
     }
-    req = s.get("https://www.vinted.nl/member/13396883-wiwi2812")
+    req = s.get("https://www.vinted.nl/")
     csrfToken = req.text.split('<meta name="csrf-token" content="')[1].split('"')[0]
     s.headers['X-CSRF-Token'] = csrfToken
     return s
 
 def download_priv_msg(session_id, user_id):
-    s = cfscrape.create_scraper()
+    s = cloudscraper.create_scraper()
     s.headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -159,7 +159,10 @@ def download_vinted_data(userids, s):
             positive_feedback_count = data['positive_feedback_count']
             negative_feedback_count = data['negative_feedback_count']
             feedback_reputation = data['feedback_reputation']
-            created_at = data['created_at']
+            try:
+                created_at = data['created_at']
+            except KeyError:
+                created_at = ""
             last_loged_on_ts = data['last_loged_on_ts']
             city_id = data['city_id']
             city = data['city']
