@@ -36,7 +36,7 @@ c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS Data
              (ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Images, Description, Title, Platform)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Depop_Data
-             (ID UNIQUE, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated)''')
+             (ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated)''')
 # Create Users table if not exists
 c.execute('''CREATE TABLE IF NOT EXISTS Users
              (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
@@ -415,7 +415,7 @@ def download_depop_data(userids):
                 product_data = requests.get(url)
                 if product_data.status_code == 200:
                     product_data = product_data.json()
-                elif r.status_code == 429:
+                elif product_data.status_code == 429:
                     print(f"Ratelimit waiting 60 seconds...")
                     limit = 60
                     for i in range(limit, 0, -1):
@@ -550,7 +550,7 @@ def download_depop_data(userids):
                                         product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State, Brand,
                                         ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
                                     c.execute(
-                                        "INSERT OR IGNORE INTO Depop_Data(ID, Sold, User_id, Gender, Category, subcategory, size, State, Brand, Colors, Price, Images, description, title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                        "INSERT OR IGNORE INTO Depop_Data(ID, Sold, User_id, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, description, title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                                         params)
                                     conn.commit()
                                     with open(filepath, 'wb') as f:
