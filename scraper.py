@@ -422,6 +422,9 @@ def download_depop_data(userids):
                         print(f"{i}", end="\r", flush=True)
                         time.sleep(1)
                     continue
+                elif product_data.status_code == 404:
+                    print("Product not found")
+                    continue
             except ValueError:
                 print("Error decoding JSON data. Skipping...")
                 continue
