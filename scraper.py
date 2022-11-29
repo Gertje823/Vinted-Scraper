@@ -424,7 +424,7 @@ def download_depop_data(userids):
                     continue
             except ValueError:
                 print("Error decoding JSON data. Skipping...")
-                pass
+                continue
 
             product_id = product_data['id']
             try:
