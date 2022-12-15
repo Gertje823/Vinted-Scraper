@@ -11,8 +11,9 @@ import cloudscraper
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
 parser.add_argument('--depop','-d',dest='Depop', action='store_true', help='Download Depop data.')
 parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted')
-parser.add_argument('--user_id','-u',dest='user_id', action='store', help='Your own userid', required=False)
+parser.add_argument('--user_id','-u',dest='user_id', action='store', help='Your own userid (Vinted)', required=False)
 parser.add_argument('--session_id','-s',dest='session_id', action='store', help='Session id cookie for Vinted', required=False)
+parser.add_argument('--tags','-t',dest='tags', action='store_true', help='Download post with tags (Vinted)', required=False)
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download (Currently only working for depop)', required=False)
 parser.add_argument('--sold_items','-g',dest='sold_items', action='store_true', help='Also download sold items (depop)', required=False)
 parser.add_argument('--start_from','-b',dest='start_from', action='store', help='Begin from a specific item (depop)', required=False)
@@ -138,6 +139,14 @@ def get_all_items(s, USER_ID, total_pages, items):
         r = s.get(url).json()
         print(f"Fetching page {page+1}/{r['pagination']['total_pages']}")
         items.extend(r['items'])
+
+def get_all_tag_items(s, tag, total_pages, items):
+        for page in range(int(total_pages) - 1):
+            page += 1
+            url = f'https://www.vinted.nl/api/v2/catalog/items?search_text={tag}&page={page}&per_page=900'
+            r = s.get(url).json()
+            print(f"Fetching page {page + 1}/{r['pagination']['total_pages']}")
+            items.extend(r['items'])
 
 def download_vinted_data(userids, s):
     Platform = "Vinted"
@@ -291,6 +300,90 @@ def download_vinted_data(userids, s):
         else:
             print(f"User {USER_ID} does not exists")
     conn.close()
+
+def download_vinted_tags(tags):
+    """"
+    Downloads items by search tag.
+    ** This feature is limited **
+    Search does not provide much product info.
+
+    TODO:
+        Find a better way to get product info from search
+        Find a way to get more than 3k items
+    """
+    s = vinted_session()
+    for tag in tags:
+        r = s.get(f"https://www.vinted.nl/api/v2/catalog/items?search_text={tag}&per_page=900")
+        if r.status_code == 200:
+            items = []
+            print(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
+            items.extend(r.json()['items'])
+            if r.json()['pagination']['total_pages'] > 1:
+                print(f"User has more than {len(items)} items. fetching next page....")
+                get_all_tag_items(s, tag, r.json()['pagination']['total_pages'], items)
+            products = items
+
+            if products:
+                print(f"Found {len(products)} items")
+                path = "downloads/" + tag.lower() + '/'
+                Platform = "Vinted"
+                try:
+                    os.mkdir(path)
+                except OSError:
+                    print("Creation of the directory %s failed or the folder already exists " % path)
+                else:
+                    print("Successfully created the directory %s " % path)
+                for product in products:
+                    # Download all products
+
+                    ID = product['id']
+                    User_id = product['user']['id']
+                    # Description is not available in search
+                    description = ''
+                    # Gender is not available in search
+                    Gender = ''
+                    # Category is not available in search
+                    Category = ''
+                    size = product['size_title']
+                    # State is not available in search
+                    State = ''
+                    Brand = product['brand_title']
+                    # Color is not available in search
+                    Colors = ''
+                    Price = f"{product['price']} {product['currency']}"
+                    title = product['title']
+                    path = "downloads/" + tag.lower() + '/'
+
+                    full_size_url = product['photo']['full_size_url']
+                    img_name = product['photo']['high_resolution']['id']
+                    # print(img_name)
+                    filepath = 'downloads/' + tag.lower() + '/' + img_name + '.jpeg'
+                    # print(img)
+                    if not os.path.isfile(filepath):
+                        # print(full_size_url)
+                        req = requests.get(full_size_url)
+                        params = (
+                        ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description,
+                        title, Platform)
+                        c.execute(
+                            "INSERT INTO Data(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, Images, description, title, Platform)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                            params)
+                        conn.commit()
+                        with open(filepath, 'wb') as f:
+                            f.write(req.content)
+                        print(f"Image saved to {filepath}")
+                    else:
+                        print('File already exists, skipped.')
+                if not products:
+                    print('User has no products')
+
+        elif r.status_code == 429:
+            print(f"Ratelimit waiting {r.headers['Retry-After']} seconds...")
+            limit = round(int(r.headers['Retry-After']) / 2)
+            for i in range(limit, 0, -1):
+                print(f"{i}", end="\r", flush=True)
+                time.sleep(1)
+            continue
 
 def get_all_depop_items(data, baseurl, slugs, args, begin):
     # Start from slug args.start_from (-b)
@@ -584,8 +677,9 @@ def download_depop_data(userids):
 
 
 #Import users from txt file
-with open('users.txt', 'r', encoding='utf-8') as list_of_users:
-            userids = list_of_users.readlines()
+if not args.tags:
+    with open('users.txt', 'r', encoding='utf-8') as list_of_users:
+                userids = list_of_users.readlines()
 
 if args.Depop:
     download_depop_data(userids)
@@ -597,6 +691,11 @@ elif args.priv_msg:
     else:
         print("Please use option -u and -s")
         exit()
+elif args.tags:
+    with open('tags.txt', 'r', encoding='utf-8') as list_of_tags:
+                tags = list_of_tags.readlines()
+    download_vinted_tags(tags)
+
 else:
     session = vinted_session()
     download_vinted_data(userids, session)
