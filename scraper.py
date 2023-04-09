@@ -132,7 +132,7 @@ def download_priv_msg(session_id, user_id):
                 conn.commit()
 
 def get_all_items(s, USER_ID, total_pages, items):
-    for page in range(int(total_pages)-1):
+    for page in range(int(total_pages)):
         page +=1
         url = f'https://www.vinted.nl/api/v2/users/{USER_ID}/items?page={page}&per_page=200000'
         r = s.get(url).json()
