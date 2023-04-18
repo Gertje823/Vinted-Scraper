@@ -40,11 +40,11 @@ Here are some examples of how you can use this script:
 
 #### Downloading data from a private Vinted message thread
 
-`python main.py -p -u {USER_ID} --own_user_id {OWN_USER_ID} --session_id {SESSION_ID}` 
+`python main.py -p --own_user_id {OWN_USER_ID} --session_id {SESSION_ID}` 
 
 #### Downloading data from Vinted posts with specific tags
 
-`python main.py -t {TAG} -u {USER_ID}` 
+`python main.py -t {TAG}` 
 
 #### Disabling file download
 
