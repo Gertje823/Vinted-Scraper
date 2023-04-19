@@ -32,6 +32,7 @@ elif args.priv_msg:
         v.download_priv_msg(vinted_session, args.own_user_id, args.session_id, download_location='downloads/Messages/')
 
 elif args.tags:
+    # Check if tags.txt exists
     if os.path.exists('tags.txt'):
         with open('tags.txt', 'r', encoding='utf-8') as list_of_tags:
             tags = list_of_tags.readlines()
