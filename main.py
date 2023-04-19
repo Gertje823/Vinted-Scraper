@@ -4,7 +4,7 @@ import argparse, os, sys
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
 # Modes:
 parser.add_argument('--user_id','-u',dest='user_id', action='store', help='User id of the profile you want to scrape (Vinted)', required=False)
-parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted (Vinted)')
+parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted (Vinted)', required=False)
 parser.add_argument('--tags','-t',dest='tags', action='store_true', help='Download post with tags (Vinted)', required=False)
 # Options
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download', default=False, required=False)
