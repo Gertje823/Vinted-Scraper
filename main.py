@@ -8,13 +8,17 @@ parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', h
 parser.add_argument('--tags','-t',dest='tags', action='store_true', help='Download post with tags (Vinted)', required=False)
 # Options
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download', default=False, required=False)
+parser.add_argument('--download-location','-l',dest='download_location', action='store', help='Set custom download location', required=False)
 
 # Only used when --private_msg
 parser.add_argument('--own_user_id','-o',dest='own_user_id', action='store', help='Your own userid (Vinted)', required=False)
 parser.add_argument('--session_id','-s',dest='session_id', action='store', help='Session id cookie for Vinted (Vinted)', required=False)
 args = parser.parse_args()
 
-v = vinted_scraper()
+if args.download_location:
+    v = vinted_scraper(download_location=args.download_location)
+else:
+    v = vinted_scraper()
 c, conn = v.init_database()
 vinted_session = v.create_session()
 

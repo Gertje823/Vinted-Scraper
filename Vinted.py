@@ -6,6 +6,7 @@ import requests
 from tqdm import tqdm
 
 class vinted_scraper:
+
     def __init__(self, download_location='downloads'):
       """"
       Init Vinted Class
@@ -13,6 +14,7 @@ class vinted_scraper:
       """
       global Platform
       Platform = 'Vinted'
+      self.download_location = download_location
       # create download folders
       if not os.path.exists(download_location):
           os.makedirs(download_location)
@@ -106,7 +108,7 @@ class vinted_scraper:
 
         return items
 
-    def download_user_data(self, vinted_session, user_id, download_location='downloads', sqlite_file="data.db", disable_file_download=False):
+    def download_user_data(self, vinted_session, user_id, sqlite_file="data.db", disable_file_download=False):
         """"
         Download Vinted User Data
         """
@@ -145,7 +147,7 @@ class vinted_scraper:
                 photo = data['photo']['full_size_url']
                 photo_id = data['photo']['id']
                 req = requests.get(photo)
-                filepath = f'{download_location}/Avatars/{photo_id}.jpeg'
+                filepath = f'{self.download_location}/Avatars/{photo_id}.jpeg'
                 if not os.path.isfile(filepath) and not disable_file_download:
                   print(photo_id)
                   with open(filepath, 'wb') as f:
@@ -164,7 +166,7 @@ class vinted_scraper:
             columns = ['Username', 'User_id', 'Gender', 'Given_item_count', 'Taken_item_count', 'Followers_count', 'Following_count', 'Positive_feedback_count', 'Negative_feedback_count', 'Feedback_reputation', 'Avatar', 'Created_at', 'Last_loged_on_ts', 'City_id', 'City', 'Country_title', 'Verification_email', 'Verification_facebook', 'Verification_google', 'Verification_phone']
             self.insert_into_db('Vinted_Users', columns, values, sqlite_file)
 
-    def download_item_data(self, vinted_session, user_id, download_location='downloads', sqlite_file="data.db", disable_file_download=False):
+    def download_item_data(self, vinted_session, user_id, sqlite_file="data.db", disable_file_download=False):
         url = f'https://www.vinted.com/api/v2/users/{user_id}/items?page=1&per_page=200000'
         r = vinted_session.get(url)
         x = 0
@@ -178,7 +180,7 @@ class vinted_scraper:
 
             print(f"Total items: {len(items)}")
             if items:
-                path = f"{download_location}/{user_id}/"
+                path = f"{self.download_location}/{user_id}/"
                 if not os.path.exists(path):
                     os.makedirs(path)
                 pbar = tqdm(desc="Downloading Items", total=len(items), unit=" items")
@@ -230,7 +232,8 @@ class vinted_scraper:
         else:
             print(f"User {user_id} does not exists")
 
-    def download_priv_msg(self, vinted_session, own_user_id, session_id, download_location='downloads/Messages/', sqlite_file="data.db", disable_file_download=False):
+    def download_priv_msg(self, vinted_session, own_user_id, session_id, sqlite_file="data.db", disable_file_download=False):
+        download_location = self.download_location + '/Messages/'
         data = vinted_session.get(f"https://www.vinted.com/api/v2/inbox?page=1&per_page=20")
         if data.status_code == 403:
             # Access denied
@@ -286,7 +289,7 @@ class vinted_scraper:
                     columns = ['thread_id', 'from_user_id', 'to_user_id', 'msg_id', 'body', 'photos']
                     self.insert_into_db('Vinted_Messages', columns, values, sqlite_file)
 
-    def download_vinted_tags(self, vinted_session, tags, download_location='downloads/tags/', sqlite_file="data.db", disable_file_download=False):
+    def download_vinted_tags(self, vinted_session, tags, sqlite_file="data.db", disable_file_download=False):
         """
         Downloads items by search tag.
         ** This feature is limited **
@@ -311,7 +314,7 @@ class vinted_scraper:
 
                 if len(items) > 0:
                     print(f"Found {len(items)} items")
-                    path = download_location + tag.lower() + '/'
+                    path = self.download_location + '/tags/' + tag.lower() + '/'
                     if not os.path.exists(path):
                             os.makedirs(path)
                     kek = 0
