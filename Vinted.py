@@ -92,7 +92,7 @@ class vinted_scraper:
                 r = r.json()
                 try:
                     items.extend(r['items'])
-                    print(f"Fetching page {page + 1}/{r['pagination']['total_pages']}")
+                    print(f"Fetching page {page + 1}/{r['pagination']['total_pages']}", end="\r", flush=True)
                 except KeyError:
                     break
             elif r.status_code == 429:
