@@ -3,6 +3,8 @@ import sqlite3
 import argparse
 import os, time
 import requests
+import re
+import json
 from tqdm import tqdm
 
 class vinted_scraper:
@@ -23,22 +25,57 @@ class vinted_scraper:
           os.makedirs(f'{download_location}/Avatars/')
 
     def init_database(self, sqlite_file='data.db'):
+        """"
+        Create database and tables if not already exists
+        """
+        conn = sqlite3.connect(sqlite_file)
+        c = conn.cursor()
+        # Create Data table if not exists
+        c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Data
+                    (ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Images, Description, Title, Platform)''')
+        # Create User table if not exists
+        c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Users
+                    (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
+        # Create Private msg table if not exists
+        c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
+                    (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
+        # Create Category teble if not exists
+        c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Categories (Cat_id UNIQUE, Cat_title, Cat_code, Cat_size_group_id, Cat_size_group_ids, Cat_shippable, Cat_parent_id, Cat_item_count, Cat_url)''')
+
+        conn.commit()
+        return c, conn
+
+    def update_categories(self, vinted_session, sqlite_file='data.db'):
       """"
-      Create database and tables if not already exists
+      Scrape all categories
       """
-      conn = sqlite3.connect(sqlite_file)
-      c = conn.cursor()
-      # Create Data table if not exists
-      c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Data
-                   (ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Images, Description, Title, Platform)''')
-      # Create User table if not exists
-      c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Users
-                   (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
-      # Create Private msg table if not exists
-      c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
-                   (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
-      conn.commit()
-      return c, conn
+      url = "https://www.vinted.com/data/search-json.js"
+      response = vinted_session.get(url)
+
+      pattern = "window\.search_form_data = ([^;]*);"
+      json_data = re.findall(pattern, response.content.decode('utf-8'))
+      json_data = json.loads(json_data[0])
+      #print("Updating Categories....")
+      pbar = tqdm(desc="Updating Categories", total=len(json_data['catalogs']), unit="items")
+      y=0
+      for x in json_data['catalogs']:
+        y=+1
+        pbar.update(y)
+        cat_title = json_data['catalogs'][x]['title']
+        cat_id = json_data['catalogs'][x]['id']
+        cat_code = json_data['catalogs'][x]['code']
+        cat_size_group_id = json_data['catalogs'][x]['size_group_id']
+        cat_size_group_ids = json_data['catalogs'][x]['size_group_ids']
+        cat_shippable = json_data['catalogs'][x]['shippable']
+        cat_parent_id = json_data['catalogs'][x]['parent_id']
+        cat_item_count = json_data['catalogs'][x]['item_count']
+        cat_url = json_data['catalogs'][x]['url']
+
+        # Add category data to DB
+        values = [(cat_id, cat_title, cat_code, cat_size_group_id, str(cat_size_group_ids), cat_shippable, cat_parent_id, cat_item_count, cat_url)]
+        columns = ['Cat_id', 'Cat_title', 'Cat_code', 'Cat_size_group_id', 'Cat_size_group_ids', 'Cat_shippable', 'Cat_parent_id', 'Cat_item_count', 'Cat_url']
+        self.insert_into_db('Vinted_Categories', columns, values, sqlite_file)
+
 
     def create_session(self, _vinted_fr_session=None):
       s = cloudscraper.create_scraper()
@@ -73,7 +110,7 @@ class vinted_scraper:
         """
         conn = sqlite3.connect(sqlite_file)
         c = conn.cursor()
-        query = f"INSERT INTO {table_name}({', '.join(columns)}) VALUES ({', '.join(['?'] * len(columns))})"
+        query = f"INSERT OR REPLACE INTO {table_name}({', '.join(columns)}) VALUES ({', '.join(['?'] * len(columns))})"
         for val_tuple in values:
             c.execute(query, val_tuple)
         conn.commit()
