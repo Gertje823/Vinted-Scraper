@@ -4,6 +4,7 @@ This is a tool to download images and scrape data from Vinted & Depop and store 
 -- *Currently working on [version 2.0](https://github.com/Gertje823/Vinted-Scraper/tree/v2)* (WIP) -- 
 
 ## How to use
+python3 vintedScraper.py
 ### Vinted
 Put the user IDs of the accounts in the users.txt and run the script.
 The script will download all the images and put it in the downloads folder.
