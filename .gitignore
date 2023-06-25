@@ -1,4 +1,7 @@
 .vs/
+data.db
+items.txt
+tags/txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
