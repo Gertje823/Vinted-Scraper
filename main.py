@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader.
 parser.add_argument('--user_id','-u',dest='user_id', action='store', help='User id of the profile you want to scrape (Vinted)', required=False)
 parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted (Vinted)', required=False)
 parser.add_argument('--tags','-t',dest='tags', action='store_true', help='Download post with tags (Vinted)', required=False)
+parser.add_argument('--items','-i', dest='items', action='store_true', help='Download items by id from items.txt', required=False)
 # Options
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download', default=False, required=False)
 parser.add_argument('--disable-category-update','-c',dest='disable_category_update', action='store_true', help='Disable category update', default=False, required=False)
@@ -56,6 +57,14 @@ elif args.tags:
         print("tags.txt not found.\nPlease create tags.txt")
         sys.exit(1)
 
+elif args.items:
+    if os.path.exists('items.txt'):
+        with open('items.txt', 'r', encoding='utf-8') as list_of_items:
+            items = list_of_items.readlines()
+        v.download_vinted_items(vinted_session, items, disable_file_download=args.disable_file_download)
+    else:
+        print("items.txt not found.\nPlease create items.txt")
+        sys.exit(1)
 
 else:
     # Check if users.txt exists

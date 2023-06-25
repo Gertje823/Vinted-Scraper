@@ -56,6 +56,14 @@ class vinted_scraper:
       json_data = re.findall(pattern, response.content.decode('utf-8'))
       json_data = json.loads(json_data[0])
       #print("Updating Categories....")
+      
+      
+      conn = sqlite3.connect(sqlite_file)
+      c = conn.cursor()
+      c.execute('''SELECT COUNT(Cat_id) FROM Vinted_Categories''')
+      count = c.fetchone()[0]
+      if len(json_data['catalogs']) == int(count):
+        return
       pbar = tqdm(desc="Updating Categories", total=len(json_data['catalogs']), unit="items")
       y=0
       for x in json_data['catalogs']:
@@ -269,13 +277,78 @@ class vinted_scraper:
         else:
             print(f"User {user_id} does not exists")
 
+    def download_vinted_items(self, vinted_session, items, sqlite_file="data.db", disable_file_download=False):
+        pbar = tqdm(desc="Downloading Items", total=len(items), unit=" items")
+        for item_id in items:
+            x=+1
+            pbar.update(x)
+            url = f'https://www.vinted.com/api/v2/items/{item_id}'
+            r = vinted_session.get(url)
+            x = 0
+            if r.status_code == 200:
+                item = r.json()['item']
+
+                if item:
+                    img = item['photos']
+                    ID = item['id']
+                    User_id = item['user_id']
+                    description = item['description']
+                    Gender = item['user']['gender']
+                    Category = item['catalog_id']
+                    size = item['size']
+                    State = item['status']
+                    Brand = item['brand']
+                    Colors = item['color1']
+                    Price = item['price']
+                    Price = f"{Price['amount']} {Price['currency_code']}"
+                    Images = item['photos']
+                    title = item['title']
+
+                    # Create path
+                    path = f"{self.download_location}/{User_id}/"
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+
+                    # Download User Data
+                    self.download_user_data(vinted_session, str(User_id))
+
+                    # Download images
+                    if Images:
+                        for images in img:
+                            full_size_url = images['full_size_url']
+                            img_name = images['high_resolution']['id']
+                            filepath = path + img_name + '.jpeg'
+                            if not os.path.isfile(filepath):
+                                pbar.write(f"Downloading {filepath}")
+                                req = requests.get(full_size_url)
+                                values = [(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description, title, Platform)]
+                                columns = ['ID', 'User_id', 'Gender', 'Category', 'size', 'State', 'Brand', 'Colors', 'Price', 'Images', 'description', 'title', 'Platform']
+                                self.insert_into_db('Vinted_Data', columns, values, sqlite_file)
+                                if not disable_file_download:
+                                    with open(filepath, 'wb') as f:
+                                        f.write(req.content)
+                            else:
+                                pbar.write('File already exists, skipped.')
+                    
+                else:
+                    pbar.write('No items')
+            elif r.status_code == 429:
+                pbar.write(f"Ratelimit waiting {r.headers['Retry-After']} seconds...")
+                limit = round(int(r.headers['Retry-After']) / 2)
+                for i in range(limit, 0, -1):
+                    print(f"{i}", end="\r", flush=True)
+                    time.sleep(1)
+            else:
+                pbar.write(f"Item {item_id} does not exists")
+        pbar.close()
+
     def download_priv_msg(self, vinted_session, own_user_id, session_id, sqlite_file="data.db", disable_file_download=False):
         download_location = self.download_location + '/Messages/'
         data = vinted_session.get(f"https://www.vinted.com/api/v2/inbox?page=1&per_page=20")
         if data.status_code == 403:
             # Access denied
             print(
-                f"Error: Access Denied\nCan't get content from 'https://www.vinted.nl/api/v2/users/{own_user_id}/msg_threads'\nPlease ensure your entered a valid sessionid and userid")
+                f"Error: Access Denied\nCan't get content from 'https://www.vinted.com/api/v2/users/{own_user_id}/msg_threads'\nPlease ensure your entered a valid sessionid and userid")
             exit(1)
 
         data = data.json()
