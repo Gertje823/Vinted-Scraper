@@ -20,15 +20,19 @@ Here is the usage information for the script:
 
 ### Optional arguments:
 
-| Argument | Description |
-|--|--|
-| -h, --help | Show the help message and exit. |
-| --user_id USER_ID, -u USER_ID | User ID of the profile you want to scrape (Vinted). |
-| --private_msg, -p | Download images from private messages from Vinted (Vinted).|
-| --tags, -t | Download posts with tags (Vinted). |
-| --disable-file-download, -n | Disable file download. |
-| --own_user_id OWN_USER_ID, -o OWN_USER_ID | Your own user ID (Vinted). |
-| --session_id SESSION_ID, -s SESSION_ID | Session ID cookie for Vinted (Vinted). 
+| Optional Argument                  | Description                                                |
+|------------------------------------|------------------------------------------------------------|
+| -h, --help                         | Show this help message and exit.                          |
+| --user_id USER_ID, -u USER_ID      | User id of the profile you want to scrape.       |
+| --private_msg, -p                  | Download Vinted data from private messages from Vinted (requires -o and -s). |
+| --tags, -t                         | Download Vinted posts with tags (Vinted).                        |
+| --items, -i                        | Download Vinted items by id from items.txt.              |
+| --favourites, -f                   | Download Vinted data from your favorites (requires -o and -s).    |
+| --disable-file-download, -n        | Disable file download. (only write data to DB)                                     |
+| --disable-category-update, -c      | Disable category update.                                   |
+| --download-location DOWNLOAD_LOCATION, -l DOWNLOAD_LOCATION | Set custom download location.       |
+| --own_user_id OWN_USER_ID, -o OWN_USER_ID | Your own Vinted user id.   |
+| --session_id SESSION_ID, -s SESSION_ID    | Session id cookie for Vinted (_vinted_fr_session). |
 
 ### Examples
 
