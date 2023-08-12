@@ -289,6 +289,7 @@ class vinted_scraper:
                 item = r.json()['item']
 
                 if item:
+                    pbar.write(f'Downloading item: {item_id.strip()}')
                     img = item['photos']
                     ID = item['id']
                     User_id = item['user_id']
@@ -339,7 +340,7 @@ class vinted_scraper:
                     print(f"{i}", end="\r", flush=True)
                     time.sleep(1)
             else:
-                pbar.write(f"Item {item_id} does not exists")
+                pbar.write(f"Item {item_id.strip()} does not exists")
         pbar.close()
 
     def download_priv_msg(self, vinted_session, own_user_id, session_id, sqlite_file="data.db", disable_file_download=False):
