@@ -478,3 +478,73 @@ class vinted_scraper:
                     print(f"{i}", end="\r", flush=True)
                     time.sleep(1)
                 continue
+
+    def download_favourite(self, vinted_session, own_user_id, session_id, sqlite_file="data.db", disable_file_download=False):
+        download_location = self.download_location + '/Favourites/'
+        r = vinted_session.get(f"https://www.vinted.com/api/v2/users/{own_user_id}/items/favourites?page=1&include_sold=true&per_page=20")
+        print(r.status_code)
+        if r.status_code == 403:
+            # Access denied
+            print(
+                f"Error: Access Denied\nCan't get content from 'https://www.vinted.com/api/v2/users/{own_user_id}/items/favourites'\nPlease ensure your entered a valid sessionid, userid and you using vinted.com")
+            exit(1)
+        elif r.status_code == 200:
+            items = []
+            print(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
+            items.extend(r.json()['items'])
+            if r.json()['pagination']['total_pages'] > 1:
+                print(f"User has more than {len(items)} items. fetching next page....")
+                items = self.get_all_items(vinted_session, r.json()['pagination']['total_pages'], items, f'https://www.vinted.com/api/v2/users/{own_user_id}/items/favourites?include_sold=true&')
+
+            print(f"Total items: {len(items)}")
+            if items:
+                path = f"{download_location}"
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                pbar = tqdm(desc="Downloading Items", total=len(items), unit=" items")
+                # Loop over all items
+                for product in items:
+                    x=+1
+                    pbar.update(x)
+                    img = product['photos']
+                    ID = product['id']
+                    User_id = product['user_id']
+
+                    description = product['description']
+                    Gender = product['user']['gender']
+                    Category = product['catalog_id']
+                    size = product['size']
+                    State = product['status']
+                    Brand = product['brand']
+                    Colors = product['color1']
+                    Price = product['price']
+                    Price = f"{Price['amount']} {Price['currency_code']}"
+                    Images = product['photos']
+                    title = product['title']
+
+                    # Download images
+                    if Images:
+                        for images in img:
+                            full_size_url = images['full_size_url']
+                            img_name = images['high_resolution']['id']
+                            filepath = path + img_name + '.jpeg'
+                            if not os.path.isfile(filepath):
+                                pbar.write(f"Downloading {filepath}")
+                                req = requests.get(full_size_url)
+                                values = [(ID, User_id, Gender, Category, size, State, Brand, Colors, Price, filepath, description, title, Platform)]
+                                columns = ['ID', 'User_id', 'Gender', 'Category', 'size', 'State', 'Brand', 'Colors', 'Price', 'Images', 'description', 'title', 'Platform']
+                                self.insert_into_db('Vinted_Data', columns, values, sqlite_file)
+                                if not disable_file_download:
+                                    with open(filepath, 'wb') as f:
+                                        f.write(req.content)
+                            else:
+                                pbar.write('File already exists, skipped.')
+                pbar.close()
+            else:
+                print('User has no items')
+        elif r.status_code == 429:
+            print(f"Ratelimit waiting {r.headers['Retry-After']} seconds...")
+            limit = round(int(r.headers['Retry-After']) / 2)
+            for i in range(limit, 0, -1):
+                print(f"{i}", end="\r", flush=True)
+                time.sleep(1)

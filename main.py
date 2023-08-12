@@ -4,15 +4,16 @@ import argparse, os, sys
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
 # Modes:
 parser.add_argument('--user_id','-u',dest='user_id', action='store', help='User id of the profile you want to scrape (Vinted)', required=False)
-parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download images from private messages from Vinted (Vinted)', required=False)
+parser.add_argument('--private_msg','-p',dest='priv_msg', action='store_true', help='Download data from private messages from Vinted (Vinted)', required=False)
 parser.add_argument('--tags','-t',dest='tags', action='store_true', help='Download post with tags (Vinted)', required=False)
 parser.add_argument('--items','-i', dest='items', action='store_true', help='Download items by id from items.txt', required=False)
+parser.add_argument('--favourites','-f', dest='favourites', action='store_true', help='Download data from your favourites. (requires -o and -s)', required=False)
 # Options
 parser.add_argument('--disable-file-download','-n',dest='disable_file_download', action='store_true', help='Disable file download', default=False, required=False)
 parser.add_argument('--disable-category-update','-c',dest='disable_category_update', action='store_true', help='Disable category update', default=False, required=False)
 parser.add_argument('--download-location','-l',dest='download_location', action='store', help='Set custom download location', required=False)
 
-# Only used when --private_msg
+# Only used when --private_msg or --favourites
 parser.add_argument('--own_user_id','-o',dest='own_user_id', action='store', help='Your own userid (Vinted)', required=False)
 parser.add_argument('--session_id','-s',dest='session_id', action='store', help='Session id cookie for Vinted (Vinted)', required=False)
 args = parser.parse_args()
@@ -46,6 +47,16 @@ elif args.priv_msg:
     else:
         vinted_session = v.create_session(_vinted_fr_session=args.session_id)
         v.download_priv_msg(vinted_session, args.own_user_id, args.session_id, download_location='downloads/Messages/')
+
+elif args.favourites:
+    # download favourite items
+    print("Downloading favourites")
+    if not args.own_user_id or not args.session_id:
+        print("Please provide a valid sessionid and your own userid")
+        exit(1)
+    else:
+        vinted_session = v.create_session(_vinted_fr_session=args.session_id)
+        v.download_favourite(vinted_session, args.own_user_id, args.session_id, disable_file_download=args.disable_file_download)
 
 elif args.tags:
     # Check if tags.txt exists
