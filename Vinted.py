@@ -45,6 +45,11 @@ class vinted_scraper:
         conn.commit()
         return c, conn
 
+    def get_value_or_empty(self, json_data, x, key):
+        try:
+            return json_data['catalogs'][x][key]
+        except KeyError:
+            return ""
     def update_categories(self, vinted_session, sqlite_file='data.db'):
       """"
       Scrape all categories
@@ -71,14 +76,13 @@ class vinted_scraper:
         pbar.update(y)
         cat_title = json_data['catalogs'][x]['title']
         cat_id = json_data['catalogs'][x]['id']
-        cat_code = json_data['catalogs'][x]['code']
-        cat_size_group_id = json_data['catalogs'][x]['size_group_id']
-        cat_size_group_ids = json_data['catalogs'][x]['size_group_ids']
-        cat_shippable = json_data['catalogs'][x]['shippable']
-        cat_parent_id = json_data['catalogs'][x]['parent_id']
-        cat_item_count = json_data['catalogs'][x]['item_count']
-        cat_url = json_data['catalogs'][x]['url']
-
+        cat_code = self.get_value_or_empty(json_data, x, 'code')
+        cat_size_group_id = self.get_value_or_empty(json_data, x, 'size_group_id')
+        cat_size_group_ids = self.get_value_or_empty(json_data, x, 'size_group_ids')
+        cat_shippable = self.get_value_or_empty(json_data, x, 'shippable')
+        cat_parent_id = self.get_value_or_empty(json_data, x, 'parent_id')
+        cat_item_count = self.get_value_or_empty(json_data, x, 'item_count')
+        cat_url = self.get_value_or_empty(json_data, x, 'url')
         # Add category data to DB
         values = [(cat_id, cat_title, cat_code, cat_size_group_id, str(cat_size_group_ids), cat_shippable, cat_parent_id, cat_item_count, cat_url)]
         columns = ['Cat_id', 'Cat_title', 'Cat_code', 'Cat_size_group_id', 'Cat_size_group_ids', 'Cat_shippable', 'Cat_parent_id', 'Cat_item_count', 'Cat_url']
