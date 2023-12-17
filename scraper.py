@@ -52,7 +52,8 @@ def extract_csrf_token(text):
     if match:
         return match.group(1)
     else:
-        return None
+        print("Error: CSRF token extraction failed.")
+        sys.exit(1)
 
 
 def vinted_session():
