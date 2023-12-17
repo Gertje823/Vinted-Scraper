@@ -6,6 +6,7 @@ import sqlite3
 import argparse
 import time
 import cloudscraper
+import re
 
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
@@ -46,6 +47,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
              (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
 conn.commit()
 
+def extract_csrf_token(text):
+    match = re.search(r'"CSRF_TOKEN":"([^"]+)"', text)
+    if match:
+        return match.group(1)
+    else:
+        return None
 
 def vinted_session():
     s = cloudscraper.create_scraper()
@@ -58,7 +65,7 @@ def vinted_session():
         'TE': 'Trailers',
     }
     req = s.get("https://www.vinted.nl/")
-    csrfToken = req.text.split('<meta name="csrf-token" content="')[1].split('"')[0]
+    csrfToken = extract_csrf_token(req.text)
     s.headers['X-CSRF-Token'] = csrfToken
     return s
 
