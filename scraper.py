@@ -43,6 +43,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS Users
              (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Depop_Users
              (Username, User_id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website)''')
+             (Username, User_id UNIQUE, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
              (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
 conn.commit()
