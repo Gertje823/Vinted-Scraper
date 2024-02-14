@@ -42,7 +42,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS Depop_Data
 c.execute('''CREATE TABLE IF NOT EXISTS Users
              (Username, User_id, Gender, Given_item_count, Taken_item_count, Followers_count, Following_count, Positive_feedback_count, Negative_feedback_count, Feedback_reputation, Avatar, Created_at, Last_loged_on_ts, City_id, City, Country_title, Verification_email, Verification_facebook, Verification_google, Verification_phone, Platform)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Depop_Users
-             (Username, User_id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website)''')
              (Username, User_id UNIQUE, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website)''')
 c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
              (thread_id, from_user_id, to_user_id, msg_id, body, photos)''')
@@ -300,7 +299,7 @@ def download_vinted_data(userids, s):
             print(f"User {USER_ID} does not exists")
     conn.close()
 
-def get_all_depop_items(data, baseurl, slugs, args, begin):
+def get_all_depop_items(data, baseurl, slugs, args, begin, s):
     # Start from slug args.start_from (-b)
     if args.start_from:
         for i in data['products']:
@@ -320,10 +319,10 @@ def get_all_depop_items(data, baseurl, slugs, args, begin):
         url = baseurl + f"&offset_id={data['meta']['last_offset_id']}"
         print(url)
         try:
-            data = requests.get(url).json()
+            data = s.get(url).json()
             # print(data)
         except:
-            print(requests.get(url).text)
+            print(s.get(url).text)
             exit()
             break
         # Start from slug args.start_from (-b)
@@ -348,6 +347,10 @@ def get_all_depop_items(data, baseurl, slugs, args, begin):
 
 def download_depop_data(userids):
     Platform = "Depop"
+    headers = {"referer":"https://www.depop.com/"}
+    s = cloudscraper.create_scraper()
+    s.headers.update(headers)
+    s.get("https://depop.com")
     for userid in userids:
         userid = userid.strip()
         print(userid)
@@ -355,7 +358,7 @@ def download_depop_data(userids):
         # Get userid from username
         url = f"https://webapi.depop.com/api/v1/shop/{userid}/"
         print(url)
-        data = requests.get(url).json()
+        data = s.get(url).json()
 
         id = str(data['id'])
         last_seen = str(data['last_seen'])
@@ -382,7 +385,7 @@ def download_depop_data(userids):
                 os.mkdir(f"downloads/Avatars/")
             except OSError:
                 print("Creation of the directory failed or the folder already exists ")
-            req = requests.get(photo)
+            req = s.get(photo)
             filepath = f'downloads/Avatars/{id}.jpeg'
             if not os.path.isfile(filepath):
                 with open(filepath, 'wb') as f:
@@ -399,15 +402,15 @@ def download_depop_data(userids):
 
 
         baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
-        data = requests.get(baseurl).json()
+        data = s.get(baseurl).json()
         print("Fetching all produts...")
         begin = False
-        slugs = get_all_depop_items(data, baseurl, slugs, args, begin)
+        slugs = get_all_depop_items(data, baseurl, slugs, args, begin, s)
 
         if args.sold_items:
             baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
-            data = requests.get(baseurl).json()
-            get_all_depop_items(data, baseurl, slugs, args, begin)
+            data = s.get(baseurl).json()
+            get_all_depop_items(data, baseurl, slugs, args, begin, s)
 
         print("Got all products. Start Downloading...")
         print(len(slugs))
@@ -420,7 +423,7 @@ def download_depop_data(userids):
             url = f"https://webapi.depop.com/api/v2/product/{slug}"
             print(slug)
             try:
-                product_data = requests.get(url)
+                product_data = s.get(url)
                 if product_data.status_code == 200:
                     product_data = product_data.json()
                 elif product_data.status_code == 429:
