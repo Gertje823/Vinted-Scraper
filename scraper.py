@@ -348,7 +348,11 @@ def get_all_depop_items(data, baseurl, slugs, args, begin, s):
 def download_depop_data(userids):
     Platform = "Depop"
     headers = {"referer":"https://www.depop.com/"}
-    s = cloudscraper.create_scraper()
+    s = cloudscraper.create_scraper(browser={
+        'browser': 'firefox',
+        'platform': 'windows',
+        'desktop': True
+    })
     s.headers.update(headers)
     s.get("https://depop.com")
     for userid in userids:
