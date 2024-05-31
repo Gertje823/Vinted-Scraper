@@ -7,7 +7,6 @@ import argparse
 import time
 import cloudscraper
 import re
-
 # ArgParse
 parser = argparse.ArgumentParser(description='Vinted & Depop Scraper/Downloader. Default downloads Vinted')
 parser.add_argument('--depop','-d',dest='Depop', action='store_true', help='Download Depop data.')
@@ -345,54 +344,150 @@ def get_all_depop_items(data, baseurl, slugs, args, begin, s):
                 break
     return slugs
 
+def get_all_depop_items_moblile_api(data, baseurl, slugs, args, begin, s):
+    # Start from slug args.start_from (-b)
+    if args.start_from:
+        for i in data['objects']:
+            # Prevent duplicates
+            if not i['slug'] in slugs:
+                if args.start_from == i['slug'] or begin == True:
+                    begin = True
+                    slugs.append(i['slug'])
+    else:
+        # start from 0
+        for i in data['objects']:
+            # Prevent duplicates
+            if not i['id'] in slugs:
+                slugs.append(i['id'])
+    while True:
+        if data['meta']['end']:
+            return slugs
+        url = baseurl + f"&offset_id={data['meta']['last_offset_id']}"
+        print(url)
+        try:
+            data = s.get(url).json()
+            # print(data)
+        except:
+            print(s.get(url).text)
+            exit()
+            break
+        # Start from slug args.start_from (-b)
+        if args.start_from:
+            for i in data['objects']:
+                # Prevent duplicates
+                if not i['id'] in slugs:
+                    if args.start_from == i['id'] or begin == True:
+                        begin = True
+                        slugs.append(i['id'])
+            if data['meta']['end'] == True:
+                break
+        else:
+            # start from 0
+            for i in data['objects']:
+                # Prevent duplicates
+                if not i['id'] in slugs:
+                    slugs.append(i['id'])
+            if data['meta']['end'] == True:
+                break
+    return slugs
+
 def download_depop_data(userids):
     Platform = "Depop"
     headers = {"referer":"https://www.depop.com/"}
-    s = cloudscraper.create_scraper()
+    s = cloudscraper.create_scraper(browser={
+        'browser': 'firefox',
+        'platform': 'windows',
+        'desktop': True
+    })
     s.headers.update(headers)
     s.get("https://depop.com")
     for userid in userids:
         userid = userid.strip()
-        print(userid)
+        # convert username to user id
+        search_data = s.get(f"https://api.depop.com/api/v1/search/users/top/?q={userid}").json()
+        for item in search_data['objects']:
+            if item['username'] == userid:
+                print(f"User {userid} has userID {item['id']}")
+                break
+        real_userid = item['id']
         slugs = []
         # Get userid from username
-        url = f"https://webapi.depop.com/api/v1/shop/{userid}/"
+        url = f"https://webapi.depop.com/api/v2/shop/{userid}/"
+        url = f"https://api.depop.com/api/v1/users/{real_userid}/"
         print(url)
+        #print(s.get(url).content)
         data = s.get(url).json()
 
         id = str(data['id'])
-        last_seen = str(data['last_seen'])
-        bio = str(data['bio']).encode("UTF-8")
-        followers = str(data['followers'])
-        following = str(data['following'])
+
+        # This data is only available for authenticated users via mobile API :(
+        try:
+            last_seen = str(data['last_seen'])
+        except KeyError:
+            last_seen = None
+        try:
+            bio = str(data['bio']).encode("UTF-8")
+        except KeyError:
+            bio = None
+        try:
+            followers = str(data['followers'])
+        except KeyError:
+            followers = None
+        try:
+            following = str(data['following'])
+        except KeyError:
+            following = None
         try:
             initials = str(data['initials']).encode("UTF-8")
         except UnicodeEncodeError:
             initials = None
-        items_sold = str(data['items_sold'])
+        except KeyError:
+            initials = None
+        try:
+            items_sold = str(data['items_sold'])
+        except KeyError:
+            items_sold = None
         last_name = str(data['last_name']).encode("UTF-8")
         first_name = str(data['first_name']).encode("UTF-8")
-        reviews_rating = str(data['reviews_rating'])
-        reviews_total = str(data['reviews_total'])
+        try:
+            reviews_rating = str(data['reviews_rating'])
+        except KeyError:
+            reviews_rating = None
+        try:
+            reviews_total = str(data['reviews_total'])
+        except KeyError:
+            reviews_total = None
         username = str(data['username'])
-        verified = str(data['verified'])
-        website = str(data['website'])
+        try:
+            verified = str(data['verified'])
+        except KeyError:
+            verified = None
+        try:
+            website = str(data['website'])
+        except KeyError:
+            website = None
         filepath = None
-        if len(data['picture']) > 0:
-            photo = data['picture']['300'][:-6] + "U0.jpg"
-            print(photo)
-            try:
-                os.mkdir(f"downloads/Avatars/")
-            except OSError:
-                print("Creation of the directory failed or the folder already exists ")
-            req = s.get(photo)
-            filepath = f'downloads/Avatars/{id}.jpeg'
-            if not os.path.isfile(filepath):
-                with open(filepath, 'wb') as f:
-                    f.write(req.content)
-                print(f"Avatar saved to {filepath}")
-        else:
-            print('File already exists, skipped.')
+        try:
+
+            if data['picture_data']:
+                photo = data['picture_data']['formats']['U0']['url']
+                print(photo)
+                try:
+                    os.mkdir(f"downloads/Avatars/")
+                except OSError:
+                    print("Creation of the directory failed or the folder already exists ")
+                req = s.get(photo)
+                filepath = f'downloads/Avatars/{id}.jpeg'
+                if not os.path.isfile(filepath):
+                    with open(filepath, 'wb') as f:
+                        f.write(req.content)
+                    print(f"Avatar saved to {filepath}")
+            else:
+                print('File already exists, skipped.')
+        except KeyError:
+            print("No avatar found")
+
+
         params = (username, id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, filepath, reviews_rating, reviews_total, verified,website)
         c.execute(
             "INSERT OR IGNORE INTO Depop_Users(Username, User_id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -400,30 +495,35 @@ def download_depop_data(userids):
         conn.commit()
 
 
-
-        baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
+        #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
+        baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
         data = s.get(baseurl).json()
+
         print("Fetching all produts...")
         begin = False
-        slugs = get_all_depop_items(data, baseurl, slugs, args, begin, s)
+        product_ids = []
+        product_ids = get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
 
         if args.sold_items:
             baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
+            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/filteredProducts/sold?limit=200"
             data = s.get(baseurl).json()
-            get_all_depop_items(data, baseurl, slugs, args, begin, s)
+            get_all_depop_items(data, baseurl, product_ids, args, begin, s)
 
         print("Got all products. Start Downloading...")
-        print(len(slugs))
+        print(len(product_ids))
         path = "downloads/" + str(userid) + '/'
         try:
             os.mkdir(path)
         except OSError:
             print("Creation of the directory %s failed or the folder already exists " % path)
-        for slug in slugs:
-            url = f"https://webapi.depop.com/api/v2/product/{slug}"
-            print(slug)
+        for product_id_ in product_ids:
+            print("Item", product_id_)
+            #url = f"https://webapi.depop.com/api/v2/product/{slug}"
+            url = f"https://api.depop.com/api/v1/products/{product_id_}/"
             try:
                 product_data = s.get(url)
+                #print(product_data)
                 if product_data.status_code == 200:
                     product_data = product_data.json()
                 elif product_data.status_code == 429:
@@ -439,7 +539,7 @@ def download_depop_data(userids):
             except ValueError:
                 print("Error decoding JSON data. Skipping...")
                 continue
-
+            #print(json.dumps(product_data, indent=4))
             product_id = product_data['id']
             try:
                 Gender = product_data['gender']
@@ -458,15 +558,16 @@ def download_depop_data(userids):
             except KeyError:
                 subcategory = None
             address = product_data['address']
-            dateUpdated = product_data['dateUpdated']
+            dateUpdated = product_data['pub_date']
             try:
-                State = product_data['condition']['name']
+                State = product_data['condition']
             except KeyError:
                 State = None
 
-            Price = product_data['price']['priceAmount'] + product_data['price']['currencyName']
+            Price = product_data['price_amount'] + product_data['price_currency']
             description = product_data['description']
             Sold = product_data['status']
+            slug= product_data['slug']
             title = slug.replace("-"," ")
 
             Colors = []
@@ -479,7 +580,7 @@ def download_depop_data(userids):
             # Get colors if available
             try:
                 for color in product_data['colour']:
-                    Colors.append(color['name'])
+                    Colors.append(color)
             except KeyError:
                 pass
 
@@ -498,10 +599,10 @@ def download_depop_data(userids):
 
 
             # Download images
-            for images in product_data['pictures']:
-                for i in images:
-                    full_size_url = i['url']
-                    img_name = i['id']
+            for images in product_data['pictures_data']:
+                # for i in images:
+                full_size_url = images['formats']['P0']['url']
+                img_name = images['id']
 
                 filepath = 'downloads/' + str(userid) + '/' + str(img_name) + '.jpg'
                 if not args.disable_file_download:
