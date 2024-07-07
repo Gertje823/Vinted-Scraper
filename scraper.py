@@ -658,7 +658,7 @@ def download_depop_data(userids):
             # Download videos
             if len(product_data['videos']) > 0:
                 for x in product_data['videos']:
-                    for source in x['sources']:
+                    for source in x['outputs']:
                         if source['format'] == 'MP4':
                             video_url = source['url']
                             file_name = video_url.split('/')[5]
@@ -666,7 +666,7 @@ def download_depop_data(userids):
                             if not args.disable_file_download:
                                 if not os.path.isfile(filepath):
                                     req = requests.get(video_url)
-                                    print(video_url)
+                                    #print(video_url)
                                     params = (
                                         product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State, Brand,
                                         ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
