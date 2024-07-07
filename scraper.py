@@ -18,6 +18,10 @@ parser.add_argument('--sold_items','-g',dest='sold_items', action='store_true', 
 parser.add_argument('--start_from','-b',dest='start_from', action='store', help='Begin from a specific item (depop)', required=False)
 args = parser.parse_args()
 
+if args.disable_file_download and not args.Depop:
+    print("-n only works with Depop. Use -n -d to disable filedownloads from Depop")
+    exit(1)
+
 # create downlods folders
 if not os.path.exists('downloads'):
     os.makedirs('downloads')
