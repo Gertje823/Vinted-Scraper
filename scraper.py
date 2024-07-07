@@ -517,8 +517,11 @@ def download_depop_data(userids):
         if args.sold_items:
             baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
             baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/filteredProducts/sold?limit=200"
+            #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
+            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
             data = s.get(baseurl).json()
             get_all_depop_items(data, baseurl, product_ids, args, begin, s)
+            get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
 
         print("Got all products. Start Downloading...")
         print(len(product_ids))
