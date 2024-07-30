@@ -62,7 +62,9 @@ All the info will be stored in the sqlite db in the following tables:
 
 ### Vinted Products
  `ID`  
- `User_id`     
+ `User_id`    
+ `Url`
+ `Favourite`
  `Gender`  
  `Category`           
  `Size`         
