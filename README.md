@@ -22,9 +22,11 @@ The data will be stored in the SQLite database.
 `-p` [Vinted] scrape all images from your private messages. (requires `-s` to login and `-u` to set your userid)  
 `-s "your_vinted_fr_session"` [Vinted] to login to your account. [how to get sessionid?](https://github.com/Gertje823/Vinted-Scraper/wiki/How-to-get-Vinted-sessionID%3F)   
 `-u` [Vinted] set your userid  
+`-i` [Vinted] define the maximum number of images to download. Minimum 1 image. (example: `-i 1` will download only the first image of the product)
 `-n` [Depop] Disable file download (Only scrape product info)  
 `-g` [Depop] Also download sold items  
 `-b` [Depop] Start from a specific item. (example: `python3 scraper.py -d -n -b "coose-navy-lee-sweatshirt-amazing-lee"`)
+
 
 
 ### Example:  
