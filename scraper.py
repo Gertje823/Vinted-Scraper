@@ -229,6 +229,9 @@ def download_vinted_data(userids, s):
 
             r = s.get(url)
             items = []
+            if r.status_code == 404:
+                print(f"User '{USER_ID}' not found")
+                continue
             print(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
             items.extend(r.json()['items'])
             # products = jsonresponse['items']
