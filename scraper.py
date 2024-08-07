@@ -508,19 +508,15 @@ def download_depop_data(userids):
         #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
         baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
         data = s.get(baseurl).json()
-
         print("Fetching all produts...")
         begin = False
         product_ids = []
         product_ids = get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
 
         if args.sold_items:
-            baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
-            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/filteredProducts/sold?limit=200"
             #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
             baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
             data = s.get(baseurl).json()
-            get_all_depop_items(data, baseurl, product_ids, args, begin, s)
             get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
 
         print("Got all products. Start Downloading...")
@@ -536,7 +532,6 @@ def download_depop_data(userids):
             url = f"https://api.depop.com/api/v1/products/{product_id_}/"
             try:
                 product_data = s.get(url)
-                #print(product_data)
                 if product_data.status_code == 200:
                     product_data = product_data.json()
                 elif product_data.status_code == 429:
@@ -711,6 +706,8 @@ def download_depop_data(userids):
 #Import users from txt file
 with open('users.txt', 'r', encoding='utf-8') as list_of_users:
             userids = list_of_users.readlines()
+
+
 
 if args.Depop:
     download_depop_data(userids)
