@@ -180,10 +180,10 @@ def download_vinted_data(userids, s):
             city_id = data['city_id']
             city = data['city']
             country_title = data['country_title']
-            verification_email = data['verification']['email']['valid']
-            verification_facebook = data['verification']['facebook']['valid']
-            verification_google = data['verification']['google']['valid']
-            verification_phone = data['verification']['phone']['valid']
+            verification_email = data.get('verification', {}).get('email', {}).get('valid', None)
+            verification_facebook = data.get('verification', {}).get('facebook', {}).get('valid', None)
+            verification_google = data.get('verification', {}).get('google', {}).get('valid', None)
+            verification_phone = data.get('verification', {}).get('phone', {}).get('valid', None)
             if data['photo']:
                 photo = data['photo']['full_size_url']
                 photo_id = data['photo']['id']
