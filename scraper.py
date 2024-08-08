@@ -69,6 +69,17 @@ c.execute('''CREATE TABLE IF NOT EXISTS Vinted_Messages
 
 conn.commit()
 
+# Function to update columns of Data with new version of the script
+def update_col():
+    logging.info("Trying to update columns of Data Table with new version of the script : add Url and Favourite field")
+    try:
+        c.execute('''ALTER TABLE Data ADD Url;''')
+        c.execute('''ALTER TABLE Data ADD Favourite;''')
+        conn.commit()
+        logging.info("Columns updated")
+    except Exception as e:
+        logging.error(f"Can't update columns: {e}")
+
 # Function to extract CSRF token from HTML
 def extract_csrf_token(text):
     match = re.search(r'"CSRF_TOKEN":"([^"]+)"', text)
@@ -201,10 +212,12 @@ def download_vinted_data(userids, s):
         if r.status_code == 200:
             jsonresponse = r.json()
             data = jsonresponse['user']
-            
-            # Get user data
+            #get data
             username = data['login']
-            gender = data.get('gender', None)
+            try:
+                gender = data['gender']
+            except:
+                gender = None
             given_item_count = data['given_item_count']
             taken_item_count = data['taken_item_count']
             followers_count = data['followers_count']
@@ -212,15 +225,18 @@ def download_vinted_data(userids, s):
             positive_feedback_count = data['positive_feedback_count']
             negative_feedback_count = data['negative_feedback_count']
             feedback_reputation = data['feedback_reputation']
-            created_at = data.get('created_at', "")
+            try:
+                created_at = data['created_at']
+            except KeyError:
+                created_at = ""
             last_loged_on_ts = data['last_loged_on_ts']
             city_id = data['city_id']
             city = data['city']
             country_title = data['country_title']
-            verification_email = data['verification']['email']['valid']
-            verification_facebook = data['verification']['facebook']['valid']
-            verification_google = data['verification']['google']['valid']
-            verification_phone = data['verification']['phone']['valid']
+            verification_email = data.get('verification', {}).get('email', {}).get('valid', None)
+            verification_facebook = data.get('verification', {}).get('facebook', {}).get('valid', None)
+            verification_google = data.get('verification', {}).get('google', {}).get('valid', None)
+            verification_phone = data.get('verification', {}).get('phone', {}).get('valid', None)
 
             # Handle user avatar
             if data['photo']:
@@ -276,6 +292,10 @@ def download_vinted_data(userids, s):
             r = s.get(url)
             items = []
             logging.info(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
+            if r.status_code == 404:
+                print(f"User '{USER_ID}' not found")
+                continue
+            print(f"Fetching page 1/{r.json()['pagination']['total_pages']}")
             items.extend(r.json()['items'])
             
             if r.json()['pagination']['total_pages'] > 1:
@@ -340,12 +360,22 @@ def download_vinted_data(userids, s):
                                         filepath, description, title, Platform
                                     )
                                     
-                                    c.execute(
-                                        "INSERT INTO Data(ID, User_id, Url, Favourite, Gender, Category, size, State, "
-                                        "Brand, Colors, Price, Images, description, title, Platform) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                                        params
-                                    )
-                                    conn.commit()
+                                    try:
+                                        c.execute(
+                                            "INSERT INTO Data(ID, User_id, Url, Favourite, Gender, Category, size, State, "
+                                            "Brand, Colors, Price, Images, description, title, Platform) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                            params
+                                        )
+                                    except Exception as e:
+                                        logging.error(f"Can't execute query : {e}")
+                                        update_col()
+                                    finally:
+                                        c.execute(
+                                            "INSERT INTO Data(ID, User_id, Url, Favourite, Gender, Category, size, State, "
+                                            "Brand, Colors, Price, Images, description, title, Platform) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                                            params
+                                        )
+                                        conn.commit()
                                     
                                     with open(filepath, 'wb') as f:
                                         f.write(req.content)
