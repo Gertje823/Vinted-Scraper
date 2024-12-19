@@ -506,300 +506,161 @@ def download_depop_data(userids):
         userid = userid.strip()
         # convert username to user id
         search_data = s.get(f"https://api.depop.com/api/v1/search/users/top/?q={userid}").json()
-        for item in search_data['objects']:
+        real_userid = None
+        for item in search_data.get('objects', []):
             if item['username'] == userid:
-                print(f"User {userid} has userID {item['id']}")
+                real_userid = item['id']
+                print(f"User {userid} has userID {real_userid}")
                 break
-        real_userid = item['id']
-        slugs = []
-        # Get userid from username
-        url = f"https://webapi.depop.com/api/v2/shop/{userid}/"
+        
+        if not real_userid:
+            print(f"Could not find user ID for {userid}")
+            continue
+
+        # Get user data
         url = f"https://api.depop.com/api/v1/users/{real_userid}/"
         print(url)
-        #print(s.get(url).content)
         data = s.get(url).json()
 
-        id = str(data['id'])
+        # Process user data
+        user_data = {
+            'id': str(data['id']),
+            'username': str(data['username']),
+            'first_name': str(data.get('first_name', '')).encode("UTF-8"),
+            'last_name': str(data.get('last_name', '')).encode("UTF-8"),
+            'bio': str(data.get('bio', '')).encode("UTF-8"),
+            'followers': str(data.get('followers', '')),
+            'following': str(data.get('following', '')),
+            'items_sold': str(data.get('items_sold', '')),
+            'last_seen': str(data.get('last_seen', '')),
+            'reviews_rating': str(data.get('reviews_rating', '')),
+            'reviews_total': str(data.get('reviews_total', '')),
+            'verified': str(data.get('verified', '')),
+            'website': str(data.get('website', ''))
+        }
 
-        # This data is only available for authenticated users via mobile API :(
-        try:
-            last_seen = str(data['last_seen'])
-        except KeyError:
-            last_seen = None
-        try:
-            bio = str(data['bio']).encode("UTF-8")
-        except KeyError:
-            bio = None
-        try:
-            followers = str(data['followers'])
-        except KeyError:
-            followers = None
-        try:
-            following = str(data['following'])
-        except KeyError:
-            following = None       
-        try:
-            initials = str(data['initials']).encode("UTF-8")
-        except UnicodeEncodeError:
-            initials = None
-        except KeyError:
-            initials = None
-        try:
-            items_sold = str(data['items_sold'])
-        except KeyError:
-            items_sold = None
-        last_name = str(data['last_name']).encode("UTF-8")
-        first_name = str(data['first_name']).encode("UTF-8")
-        try:
-            reviews_rating = str(data['reviews_rating'])
-        except KeyError:
-            reviews_rating = None
-        try:
-            reviews_total = str(data['reviews_total'])
-        except KeyError:
-            reviews_total = None
-        username = str(data['username'])
-        try:
-            verified = str(data['verified'])
-        except KeyError:
-            verified = None
-        try:
-            website = str(data['website'])
-        except KeyError:
-            website = None
+        # Download avatar
         filepath = None
-        try:
+        if data.get('picture_data'):
+            photo = data['picture_data']['formats']['U0']['url']
+            try:
+                os.makedirs("downloads/Avatars/", exist_ok=True)
+            except OSError as e:
+                print(f"Error creating Avatars directory: {e}")
 
-            if data['picture_data']:
-                photo = data['picture_data']['formats']['U0']['url']
-                print(photo)
-                try:
-                    os.mkdir(f"downloads/Avatars/")
-                except OSError as e:
-                    if os.path.exists(f"downloads/Avatars/"):
-                        print(f"Folder already exists at downloads/Avatars/")
-                    else:
-                        print(f"Creation of the directory failed: {e}")
+            filepath = f'downloads/Avatars/{user_data["id"]}.jpeg'
+            if not os.path.isfile(filepath):
                 req = s.get(photo)
-                filepath = f'downloads/Avatars/{id}.jpeg'
-                if not os.path.isfile(filepath):
-                    with open(filepath, 'wb') as f:
-                        f.write(req.content)
-                    print(f"Avatar saved to {filepath}")
+                with open(filepath, 'wb') as f:
+                    f.write(req.content)
+                print(f"Avatar saved to {filepath}")
             else:
-                print('File already exists, skipped.')
-        except KeyError:
-            print("No avatar found")
+                print('Avatar file already exists, skipped.')
 
-
-        params = (username, id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, filepath, reviews_rating, reviews_total, verified,website)
+        # Save user data to database
+        params = tuple(user_data.values()) + (filepath,)
         c.execute(
-            "INSERT OR IGNORE INTO Depop_Users(Username, User_id, bio, first_name, followers, following, initials, items_sold, last_name, last_seen, Avatar, reviews_rating, reviews_total, verified, website) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO Depop_Users(User_id, Username, first_name, last_name, bio, followers, following, items_sold, last_seen, reviews_rating, reviews_total, verified, website, Avatar) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             params)
         conn.commit()
 
-
-        #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/products/?limit=200"
-        baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
-        data = s.get(baseurl).json()
-
-        print("Fetching all produts...")
-        begin = False
+        # Get all products
         product_ids = []
-        product_ids = get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
-
-        if args.sold_items:
-            baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
-            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/filteredProducts/sold?limit=200"
-            #baseurl = f"https://webapi.depop.com/api/v1/shop/{id}/filteredProducts/sold?limit=200"
-            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
+        baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200"
+        
+        while True:
             data = s.get(baseurl).json()
-            get_all_depop_items(data, baseurl, product_ids, args, begin, s)
-            get_all_depop_items_moblile_api(data, baseurl, product_ids, args, begin, s)
+            new_ids = [item['id'] for item in data.get('objects', [])]
+            product_ids.extend(new_ids)
+            
+            if data.get('meta', {}).get('end', True):
+                break
+            
+            baseurl = f"https://api.depop.com/api/v1/users/{real_userid}/products/?limit=200&offset_id={data['meta']['last_offset_id']}"
 
-        print("Got all products. Start Downloading...")
-        print(len(product_ids))
-        path = "downloads/" + str(userid) + '/'
-        try:
-            os.mkdir(path)
-        except OSError as e:
-            if os.path.exists(path):
-                print(f"Folder already exists at {path}")
-            else:
-                print(f"Creation of the directory failed: {e}")
-        for product_id_ in product_ids:
-            print("Item", product_id_)
-            #url = f"https://webapi.depop.com/api/v2/product/{slug}"
-            url = f"https://api.depop.com/api/v1/products/{product_id_}/"
+        print(f"Got {len(product_ids)} products. Start Downloading...")
+
+        # Create user directory
+        path = f"downloads/{userid}/"
+        os.makedirs(path, exist_ok=True)
+
+        # Process each product
+        for product_id in product_ids:
+            print(f"Processing Item {product_id}")
+            url = f"https://api.depop.com/api/v1/products/{product_id}/"
+            
             try:
                 product_data = s.get(url)
-                #print(product_data)
                 if product_data.status_code == 200:
                     product_data = product_data.json()
                 elif product_data.status_code == 429:
-                    print(f"Ratelimit waiting 60 seconds...")
-                    limit = 60
-                    for i in range(limit, 0, -1):
-                        print(f"{i}", end="\r", flush=True)
-                        time.sleep(1)
+                    print(f"Rate limit reached. Waiting 60 seconds...")
+                    time.sleep(60)
                     continue
                 elif product_data.status_code == 404:
-                    print("Product not found")
+                    print(f"Product {product_id} not found")
                     continue
             except ValueError:
-                print("Error decoding JSON data. Skipping...")
+                print(f"Error decoding JSON data for product {product_id}. Skipping...")
                 continue
-            #print(json.dumps(product_data, indent=4))
-            product_id = product_data['id']
-            try:
-                Gender = product_data['gender']
-            except KeyError:
-                Gender = None
-            try:
-                Gender = product_data['gender']
-            except KeyError:
-                Gender = None
-            try:
-                Category = product_data['group']
-            except KeyError:
-                Category = product_data['categoryId']
-            try:
-                subcategory = product_data['productType']
-            except KeyError:
-                subcategory = None
-            address = product_data['address']
-            dateUpdated = product_data['pub_date']
-            try:
-                State = product_data['condition']
-            except KeyError:
-                State = None
 
-            Price = product_data['price_amount'] + product_data['price_currency']
-            description = product_data['description']
-            Sold = product_data['status']
-            slug= product_data['slug']
-            title = slug.replace("-"," ")
+            # Extract product information
+            product_info = {
+                'id': product_data['id'],
+                'user_id': user_data['id'],
+                'sold': product_data['status'],
+                'gender': product_data.get('gender'),
+                'category': product_data.get('categoryId'),
+                'subcategory': product_data.get('productType'),
+                'size': ','.join(size['name'] for size in product_data.get('sizes', [])),
+                'state': product_data.get('condition'),
+                'brand': product_data.get('brand'),
+                'colors': ','.join(product_data.get('colour', [])),
+                'price': f"{product_data['price_amount']} {product_data['price_currency']}",
+                'description': product_data['description'],
+                'title': product_data['slug'].replace("-", " "),
+                'platform': Platform,
+                'address': product_data.get('address'),
+                'discounted_price': product_data.get('price', {}).get('discountedPriceAmount'),
+                'date_updated': product_data['pub_date']
+            }
 
-            Colors = []
-            # Get discountedPriceAmount if available
-            try:
-               discountedPriceAmount = product_data['price']['discountedPriceAmount']
-            except KeyError:
-                discountedPriceAmount = None
-                pass
-            # Get colors if available
-            try:
-                for color in product_data['colour']:
-                    Colors.append(color)
-            except KeyError:
-                pass
+            # Download images and videos
+            media_files = []
+            for img in product_data.get('pictures_data', []):
+                full_size_url = img['formats']['P0']['url']
+                img_name = img['id']
+                filepath = f'{path}{img_name}.jpg'
+                media_files.append(filepath)
 
-            # Get brand if available
-            try:
-                Brand = product_data['brand']
-            except:
-                Brand = None
-            sizes = []
-            # Get size if available
-            try:
-                for size in product_data['sizes']:
-                    sizes.append(size['name'])
-            except KeyError:
-                pass
+                if not args.disable_file_download and not os.path.isfile(filepath):
+                    req = s.get(full_size_url)
+                    with open(filepath, 'wb') as f:
+                        f.write(req.content)
+                    print(f"Image saved to {filepath}")
 
+            for video in product_data.get('videos', []):
+                for source in video.get('outputs', []):
+                    if source['format'] == 'MP4':
+                        video_url = source['url']
+                        file_name = video_url.split('/')[-1]
+                        filepath = f'{path}{file_name}'
+                        media_files.append(filepath)
 
-            # Download images
-            for images in product_data['pictures_data']:
-                # for i in images:
-                full_size_url = images['formats']['P0']['url']
-                img_name = images['id']
-
-                filepath = 'downloads/' + str(userid) + '/' + str(img_name) + '.jpg'
-                if not args.disable_file_download:
-                    if not os.path.isfile(filepath):
-                        c.execute(
-                            f"SELECT ID FROM Depop_Data WHERE ID = {product_id}")
-                        result = c.fetchone()
-                        if result:
-                            # Already exists
-                            c.execute('''UPDATE Depop_Data SET Image = ? WHERE ID = ?''', (filepath, product_id))
-                            conn.commit()
-                            req = requests.get(full_size_url)
+                        if not args.disable_file_download and not os.path.isfile(filepath):
+                            req = s.get(video_url)
                             with open(filepath, 'wb') as f:
                                 f.write(req.content)
-                            print(f"Image saved to {filepath}")
-                        else:
-                            print(img_name)
-                            print(full_size_url)
-                            req = requests.get(full_size_url)
-                            params = (
-                            product_id, id, Sold, Gender, Category, subcategory, ','.join(sizes), State, Brand, ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
-                            c.execute(
-                                "INSERT OR IGNORE INTO Depop_Data(ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                                params)
-                            conn.commit()
-                            with open(filepath, 'wb') as f:
-                                f.write(req.content)
-                            print(f"Image saved to {filepath}")
-                    else:
-                        print('File already exists, skipped.')
-                elif args.disable_file_download:
-                    c.execute(
-                        f"SELECT ID FROM Depop_Data WHERE ID = {product_id}")
-                    result = c.fetchone()
-                    if result:
-                        #Already exists
-                        continue
-                    else:
-                        params = (
-                            product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State, Brand, ','.join(Colors),
-                            Price, description, title, Platform, address, discountedPriceAmount, dateUpdated)
-                        c.execute(
-                            "INSERT OR IGNORE INTO Depop_Data(ID, Sold, User_id, Gender, Category, subcategory, size, State, Brand, Colors, Price, description, title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                            params)
-                        conn.commit()
+                            print(f"Video saved to {filepath}")
 
-            # Download videos
-            if len(product_data['videos']) > 0:
-                for x in product_data['videos']:
-                    for source in x['outputs']:
-                        if source['format'] == 'MP4':
-                            video_url = source['url']
-                            file_name = video_url.split('/')[5]
-                            filepath = 'downloads/' + str(userid) + '/' + str(file_name)
-                            if not args.disable_file_download:
-                                if not os.path.isfile(filepath):
-                                    req = requests.get(video_url)
-                                    #print(video_url)
-                                    params = (
-                                        product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State, Brand,
-                                        ','.join(Colors), Price, filepath, description, title, Platform, address, discountedPriceAmount, dateUpdated)
-                                    c.execute(
-                                        "INSERT OR IGNORE INTO Depop_Data(ID, Sold, User_id, Gender, Category, subcategory, size, State, Brand, Colors, Price, Image, description, title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                                        params)
-                                    conn.commit()
-                                    with open(filepath, 'wb') as f:
-                                        f.write(req.content)
-                                    print(f"Video saved to {filepath}")
-                                else:
-                                    if not args.disable_file_download:
-                                        print('File already exists, skipped.')
-                            elif args.disable_file_download:
-                                c.execute(
-                                    f"SELECT ID FROM Depop_Data WHERE ID = {product_id}")
-                                result = c.fetchone()
-                                if result:
-                                    # Already exists
-                                    continue
-                                else:
-                                    params = (
-                                        product_id, Sold, id, Gender, Category, subcategory, ','.join(sizes), State,
-                                        Brand, ','.join(Colors),
-                                        Price, description, title, Platform, address, discountedPriceAmount, dateUpdated)
-                                    c.execute(
-                                        "INSERT OR IGNORE INTO Depop_Data(ID, Sold, User_id, Gender, Category, subcategory, size, State, Brand, Colors, Price, description, title, Platform, Address, discountedPriceAmount, dateUpdated)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                                        params)
-                                    conn.commit()
+            # Save product data to database
+            params = tuple(product_info.values()) + (','.join(media_files),)
+            c.execute(
+                "INSERT OR REPLACE INTO Depop_Data(ID, User_id, Sold, Gender, Category, subcategory, size, State, Brand, Colors, Price, Description, Title, Platform, Address, discountedPriceAmount, dateUpdated, Image) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                params)
+            conn.commit()
+
+    print("Finished processing all users and their products.")
 
 
 
